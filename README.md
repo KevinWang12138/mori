@@ -1,59 +1,75 @@
-<p align="center"><img src="assets/AppIcon.png" width="110" alt="Mori 图标"></p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p align="center"><img src="assets/AppIcon.png" width="110" alt="Mori icon"></p>
 <h1 align="center">Mori</h1>
-<p align="center">给博客写作，留一片安静的地方。</p>
-<p align="center">原生 macOS · Markdown · 离线写作 · MIT 开源</p>
-<p align="center"><a href="https://github.com/KevinWang12138/mori/releases/latest">下载 Mac 应用</a> · <a href="docs/USER_GUIDE.md">使用说明</a> · <a href="https://github.com/KevinWang12138/mori/issues">反馈问题</a></p>
+<p align="center">A quiet place to write your next blog post.</p>
+<p align="center">Native macOS · Markdown · Offline writing · MIT licensed</p>
+<p align="center"><a href="https://github.com/KevinWang12138/mori/releases/latest">Download for Mac</a> · <a href="docs/USER_GUIDE.md">User guide (中文)</a> · <a href="https://github.com/KevinWang12138/mori/issues">Report an issue</a></p>
 
-Mori 是为博客写作者设计的原生 Mac Markdown 编辑器。默认直接在文章中编辑，输入 Markdown 标记后转换为标题、列表和引用；也可以切到源码或分栏预览。设计参考 Typora 的直接写作体验，采用独立实现、独立视觉和独立品牌。
+Mori is a native Mac Markdown editor built for blog writers. Write directly in your document: Markdown shortcuts turn into headings, lists, and quotes as you type. Switch to source editing or a split preview whenever you need it. Inspired by Typora's direct editing experience, Mori has its own implementation, visual design, and identity.
 
-## 写作
+## Writing
 
-- 所见即所得、源码编辑、源码与预览分栏三种模式。
-- 标题、加粗、斜体、删除线、行内代码、链接、引用、嵌套列表与任务列表。
-- 可编辑表格、增删行列、列宽调整；代码高亮和代码块语言选择。
-- KaTeX 公式、Mermaid 图表，源码预览支持脚注和经过净化的 HTML。
-- 选区格式工具、`/` 插入菜单、查找替换、撤销重做。
-- 图片导入、粘贴、拖放和相对路径；图片保存在文章旁边的 `assets/`。
-- 文章库、递归文件夹索引、文件名搜索、可选正文搜索、大纲跳转、多标签页。
-- 中文与英文混合字词统计、阅读时间、写作目标、专注和打字机模式。
+- Three modes: live editing, Markdown source, and source with a side-by-side preview.
+- Headings, bold, italic, strikethrough, inline code, links, quotes, nested lists, and task lists.
+- Editable tables with row and column operations and column resizing; syntax highlighting and language selection for code blocks.
+- KaTeX equations and Mermaid diagrams. The source preview also supports footnotes and sanitized HTML.
+- Selection formatting tools, a `/` insert menu, find and replace, undo, and redo.
+- Import, paste, or drag images into your article. Images live in an `assets/` folder beside the Markdown file and use relative paths.
+- An article library with recursive folder indexing, filename search, optional content search, outline navigation, and document tabs.
+- Mixed Chinese and English word counts, estimated reading time, writing goals, focus mode, and typewriter mode.
 
-## 博客与文件
+## Blogging and files
 
-- 空白、Astro、Hugo、Jekyll 四种模板。
-- Front Matter 面板编辑标题、摘要、日期、slug、标签、分类、封面和草稿状态。只修改你变更的字段，保留其他 YAML 字段和注释。
-- 自动保存、重启后的会话与未命名草稿恢复；文件外部变化时核对版本，保护当前稿件。
-- 保存原有 UTF-8 BOM 与 CRLF 换行；每篇文章保留最近 50 个本机历史版本。
-- 导出独立 HTML、PDF，支持系统打印和复制 HTML / Markdown。HTML 包含本地图片和公式字体。
+- Four starting templates: blank, Astro, Hugo, and Jekyll.
+- A Front Matter panel for titles, descriptions, dates, slugs, tags, categories, cover images, and draft status. It updates only the fields you change and preserves other YAML fields and comments.
+- Autosave, session restoration, and recovery for unnamed drafts. External file changes are checked before saving to protect your current work.
+- Preserve existing UTF-8 BOMs and CRLF line endings. Keep the latest 50 local revisions of each article.
+- Export standalone HTML and PDF, use the system print dialog, or copy HTML and Markdown. HTML exports embed local images and equation fonts.
 
-## 自定义写作环境
+## Make your writing space your own
 
-暖纸、青苔、墨夜三套基础主题。背景可以用内置林间晨雾，也可以导入你自己的照片和纹理。
+Choose from three base themes: Warm Paper, Moss, and Ink Night. Use the built-in forest wallpaper or bring your own photos and textures.
 
-| 调整项 | 支持内容 |
+| Setting | Controls |
 | --- | --- |
-| 图片铺放 | 铺满、完整显示、平铺 |
-| 构图 | 缩放、水平位置、垂直位置 |
-| 画面 | 图片不透明度、模糊、饱和度 |
-| 可读性 | 背景底色、遮罩颜色、遮罩浓度 |
-| 纸面 | 文章纸面和侧栏的不透明度分别调整 |
-| 文字 | 三种字体、字号、行距、纸面宽度 |
-| 扩展 | 自定义文章 CSS、JSON 主题导入导出 |
+| Image placement | Fill, fit, or tile |
+| Composition | Zoom and horizontal or vertical position |
+| Image treatment | Opacity, blur, and saturation |
+| Readability | Background color, overlay color, and overlay opacity |
+| Writing surface | Separate opacity controls for the page and sidebar |
+| Typography | Three font options, font size, line spacing, and page width |
+| Extensions | Custom article CSS and JSON theme import/export |
 
-自选背景会拷贝到应用资料目录，移动原图不会使背景消失。导出主题不打包私人背景图片，可自行分享图片并在另一台 Mac 导入。
+Custom backgrounds are copied into Mori's application data folder, so moving the original photo will not remove your background. Exported themes contain settings and CSS; private background images stay on your Mac. Share an image separately and import it on another Mac when needed.
 
-## 下载与安装
+## Download and install
 
-需要 **macOS 14 或更新版本**。发布包是 Apple Silicon 与 Intel 通用应用。
+Requires **macOS 14 or later**. Releases include a universal app for Apple Silicon and Intel Macs.
 
-1. 在 [Releases](https://github.com/KevinWang12138/mori/releases/latest) 下载 DMG 或 ZIP。
-2. 打开 DMG，将 Mori 拖到 Applications；ZIP 解压后同样将 Mori.app 移到 Applications。
-3. 启动 Mori，打开文章或博客文件夹。
+1. Download the DMG or ZIP from [Releases](https://github.com/KevinWang12138/mori/releases/latest).
+2. Open the DMG and drag Mori into Applications. For the ZIP, extract it and move Mori.app into Applications.
+3. Open Mori and choose an article or your blog folder.
 
-0.1.0 使用 ad-hoc 签名，尚无 Apple Developer ID 公证。macOS 首次启动可能阻止运行；确认下载来自本仓库后，在「系统设置 → 隐私与安全性」选择「仍要打开」。源码和 SHA256 校验文件同时公开。
+### First launch on macOS
 
-## 本地构建
+Version 0.1.0 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
 
-需要 Xcode 15+、Swift 5.9+、Node.js 20+ 和 npm。打开 `Package.swift` 可以在 Xcode 编辑项目；发布应用使用构建脚本。
+1. Select **Done** to keep the app installed.
+2. Open **System Settings → Privacy & Security**.
+3. Find the message about Mori, select **Open Anyway**, and confirm **Open**.
+
+See [Apple's instructions for opening an unnotarized app](https://support.apple.com/en-us/102445). The release includes `SHA256SUMS.txt` to verify the downloaded DMG or ZIP.
+
+For a copy you have verified came from this repository, you can also remove the quarantine attribute from that specific installed app in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Mori.app
+open /Applications/Mori.app
+```
+
+## Build locally
+
+Requires Xcode 15+, Swift 5.9+, Node.js 20+, and npm. Open `Package.swift` to edit the project in Xcode; use the build script to package the app.
 
 ```bash
 git clone https://github.com/KevinWang12138/mori.git
@@ -63,34 +79,35 @@ cd Web && npm ci && cd ..
 open build/Mori.app
 ```
 
-默认生成 universal 应用。Apple Silicon 上仅构建 ARM 版本可设置 `MORI_UNIVERSAL=0`。Web 依赖和字体全部随应用打包，应用运行时无需 Node.js 或本地服务。
+The script builds a universal app by default. On Apple Silicon, set `MORI_UNIVERSAL=0` to build only the ARM version. Editor dependencies and fonts are bundled with the app, so running Mori requires neither Node.js nor a local server.
 
-验证：
+Run the checks:
 
 ```bash
 ./scripts/check.sh
 ```
 
-项目结构：
+Project structure:
 
 ```text
-Sources/Mori/      SwiftUI 界面、AppKit 文件与窗口集成、WebKit 桥接
-Sources/MoriCore/  文件写入与冲突校验、Markdown 分析、恢复与历史
-Web/src/          Tiptap 富文本、CodeMirror 源码、Markdown 预览
-Tests/            文件安全与文章分析测试
-Web/tests/        Markdown 往返、元信息与预览测试
-scripts/          检查、应用构建和精确 SHA 发布
+Sources/Mori/      SwiftUI views, AppKit file and window integration, WebKit bridge
+Sources/MoriCore/  File writes, conflict checks, Markdown analysis, recovery and history
+Web/src/          Tiptap live editing, CodeMirror source editing, Markdown preview
+Tests/            File safety and article analysis tests
+Web/tests/        Markdown round-trip, metadata, and preview tests
+scripts/          Checks, app packaging, and releases from an exact commit SHA
 ```
 
-## 当前边界
+## Current limitations
 
-- 扩展语法如脚注、引用式链接、MDX、嵌入 HTML、指令块和 `[TOC]` 自动使用源码模式，避免富文本转换损失原文；分栏可预览受支持的内容。MDX 组件不执行。
-- 普通 Markdown 在实际富文本编辑后会规范化标记与空行；单纯打开文件或切换模式不会写回文件。
-- 文章需要 UTF-8，单文件最大 20 MB；图片最大 25 MB。正文全文检索索引单篇小于 2 MB 的文章。正文搜索通过搜索结果点击进入，文章内部查找由编辑器完成。
-- 所见即所得查找支持跨内联格式匹配、前后导航、大小写、逐处和全部替换；源码模式另提供正则和整词匹配。
-- 没有云账户、发布到博客平台的 API 或内置同步。可以把 Markdown 文件夹放到自己的 Git、iCloud 或其他同步目录。
-- 读取文章中明确引用的 HTTPS 图片时会请求对应图片地址；链接只在用户点击时交给系统浏览器。应用不发送遥测、不上传文章。
+- Extended syntax such as footnotes, reference links, MDX, embedded HTML, directive blocks, and `[TOC]` automatically uses source mode to preserve the original text. Split mode previews supported content. MDX components are not executed.
+- Editing standard Markdown in live mode normalizes syntax and blank lines. Opening a file or switching modes alone does not write it back to disk.
+- Articles must be UTF-8 and no larger than 20 MB; images are limited to 25 MB. Content search indexes articles smaller than 2 MB. Open a result from the sidebar, then use the editor's search to find text within that article.
+- Live editing supports search across inline formatting, previous/next matches, case sensitivity, and individual or bulk replacement. Source mode also supports regular expressions and whole-word matching.
+- There are no cloud accounts, blog publishing APIs, or built-in sync. Keep your Markdown folder in your own Git, iCloud, or other sync directory.
+- HTTPS images explicitly referenced in an article are requested from their source. Links open in the system browser when you click them. Mori sends no telemetry and does not upload your writing.
+- The current app interface is in Chinese. This repository provides English and Chinese READMEs.
 
-## 开源
+## Open source
 
-[MIT License](LICENSE)。欢迎提交问题和贡献改动。第三方依赖见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，安全问题见 [SECURITY.md](SECURITY.md)。Mori 与 Typora 无隶属关系。
+Released under the [MIT License](LICENSE). Issues and contributions are welcome. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for dependency licenses and [SECURITY.md](SECURITY.md) for security information. Mori is not affiliated with Typora.
