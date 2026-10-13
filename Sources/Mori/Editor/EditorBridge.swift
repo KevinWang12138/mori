@@ -27,6 +27,7 @@ private struct WebEditorSettings: Encodable {
 
 private struct WebDocumentPayload: Encodable {
     var id: String
+    var startsInBody: Bool
     var markdown: String
     var directory: String
     var mode: String
@@ -69,7 +70,7 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
             accent: theme.accent, font: preferences.font.css, fontSize: preferences.fontSize, lineHeight: preferences.lineHeight,
             pageWidth: preferences.pageWidth, paperOpacity: preferences.paperOpacity, spellcheck: preferences.spellcheck,
             showLineNumbers: preferences.showLineNumbers, focusMode: focus, typewriterMode: typewriter, customCSS: preferences.customCSS)
-        let payload = WebDocumentPayload(id: document.id.uuidString, markdown: document.content,
+        let payload = WebDocumentPayload(id: document.id.uuidString, startsInBody: document.startsInBody, markdown: document.content,
             directory: document.url?.deletingLastPathComponent().path ?? "", mode: mode.rawValue, settings: settings)
         pending = payload; sendPending()
     }

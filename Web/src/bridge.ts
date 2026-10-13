@@ -7,7 +7,7 @@ export interface EditorSettings {
 }
 
 export interface DocumentPayload {
-  id: string; markdown: string; directory: string; mode: 'rich' | 'source' | 'split'; settings: EditorSettings
+  id: string; markdown: string; directory: string; mode: 'rich' | 'source' | 'split'; settings: EditorSettings; startsInBody?: boolean
 }
 
 export type NativeMessage =

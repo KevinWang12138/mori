@@ -23,7 +23,7 @@ struct AppearancePreview: View {
             }.frame(maxWidth: .infinity).frame(height: 460).clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay { RoundedRectangle(cornerRadius: 8).stroke(.primary.opacity(0.08), lineWidth: 1) }
             Text(L10n.text("更改会即时应用到文章。主题文件包含外观参数与 CSS，自选图片保留在本机。")).font(.system(size: 10)).foregroundStyle(.secondary).lineSpacing(4)
-        }
+        }.allowsHitTesting(false)
     }
     private var previewFont: String { switch value.font { case .editorial: return "IowanOldStyle-Roman"; case .system: return "PingFangSC-Regular"; case .song: return "SongtiSC-Regular" } }
 }

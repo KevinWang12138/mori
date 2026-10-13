@@ -50,7 +50,7 @@ Custom backgrounds are copied into Mori's application data folder, so moving the
 
 ## Language
 
-Choose **Mori → Language**, or open **Writing Environment (⌘,) → Preferences → Interface language**. Select **Follow System**, **English**, or **简体中文**. The default follows your primary system language and uses English for unsupported languages.
+Choose **Mori → Language**, or open **Writing Environment (⌘,) → Preferences → Interface language**. Select **Follow System**, **English**, or **简体中文**. Mori opens in **English** by default, including on Macs set to Chinese. Select **简体中文** to switch to Chinese, or choose **Follow System** to use your primary macOS language (unsupported languages use English).
 
 Your choice is remembered and applies immediately to the interface, editor tools, and prompts. Articles, Front Matter, cursor positions, undo history, and appearance settings are preserved. Language preferences stay separate from imported and exported themes.
 
@@ -66,7 +66,7 @@ Requires **macOS 14 or later**. Releases include a universal app for Apple Silic
 
 ### First launch on macOS
 
-Version 0.1.1 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
+Version 0.1.2 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
 
 1. Select **Done** to keep the app installed.
 2. Open **System Settings → Privacy & Security**.

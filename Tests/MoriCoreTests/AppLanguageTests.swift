@@ -18,7 +18,8 @@ final class AppLanguageTests: XCTestCase {
         let appearance = Data("existing wallpaper and custom CSS".utf8)
         defaults.set(appearance, forKey: "appearance")
         defaults.set("existing article", forKey: "draft")
-        XCTAssertEqual(AppLanguage.load(from: defaults), .system)
+        XCTAssertEqual(AppLanguage.load(from: defaults), .english)
+        XCTAssertEqual(AppLanguage.load(from: defaults).resolved(preferredLanguages: ["zh-Hans-CN"]), .english)
         AppLanguage.simplifiedChinese.save(to: defaults)
         XCTAssertEqual(AppLanguage.load(from: defaults), .simplifiedChinese)
         AppLanguage.english.save(to: defaults)
@@ -26,6 +27,8 @@ final class AppLanguageTests: XCTestCase {
         XCTAssertEqual(defaults.data(forKey: "appearance"), appearance)
         XCTAssertEqual(defaults.string(forKey: "draft"), "existing article")
         defaults.set("unknown", forKey: AppLanguage.preferenceKey)
-        XCTAssertEqual(AppLanguage.load(from: defaults), .system)
+        XCTAssertEqual(AppLanguage.load(from: defaults), .english)
+        AppLanguage.system.save(to: defaults)
+        XCTAssertEqual(AppLanguage.load(from: defaults).resolved(preferredLanguages: ["zh-Hans-CN"]), .simplifiedChinese)
     }
 }

@@ -77,7 +77,7 @@ final class DocumentStore: ObservableObject {
     func newDocument(template: BlogTemplate = .blank, title: String = L10n.text("未命名文章")) {
         let date = ISO8601DateFormatter().string(from: Date()).prefix(10)
         let content = FrontMatter.template(style: template, title: title, date: String(date))
-        let document = WritingDocument(recovery: RecoverableDocument(content: content))
+        let document = WritingDocument(recovery: RecoverableDocument(content: content), startsInBody: true)
         documents.append(document); activate(document.id); notice = L10n.text("草稿会自动保留在本机。")
     }
 

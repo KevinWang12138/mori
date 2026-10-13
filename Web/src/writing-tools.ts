@@ -37,6 +37,9 @@ export function findInRich(editor: Editor): void {
   const panel = document.createElement('section'); panel.className = 'find-panel'; localize(panel, { aria: '查找与替换' })
   const search = document.createElement('input'); localize(search, { placeholder: '查找内容', aria: '查找内容' })
   const replace = document.createElement('input'); localize(replace, { placeholder: '替换为', aria: '替换为' })
+  for (const input of [search, replace]) {
+    input.spellcheck = false; input.autocapitalize = 'off'; input.setAttribute('autocorrect', 'off')
+  }
   const count = document.createElement('span'); count.className = 'find-count'
   const sensitive = document.createElement('input'); sensitive.type = 'checkbox'
   const sensitiveLabel = document.createElement('label'); const caption = document.createElement('span'); localize(caption, { text: '区分大小写' }); sensitiveLabel.append(sensitive, caption)

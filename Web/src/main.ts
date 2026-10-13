@@ -15,6 +15,7 @@ import { formatRich, formatSource } from './formatting'
 import { findInRich, insertItems } from './writing-tools'
 import { readMetadata, updateMetadata } from './metadata'
 import { editorLanguage, localize, setEditorLanguage, t } from './i18n'
+import { focusDocument } from './editor-focus'
 import './style.css'
 import 'katex/dist/katex.min.css'
 
@@ -59,7 +60,7 @@ class DocumentEditor {
         handleDrop: (_view, event) => this.handleFiles(event.dataTransfer?.files)
       },
       onUpdate: () => {
-        if (this.suppress) return
+        if (this.suppress || this.mode !== 'rich') return
         this.markdown = splitFrontMatter(this.markdown).prefix + this.rich.getMarkdown() + '\n'
         this.richMarkdown = this.markdown
         post({ type: 'change', id: this.id, markdown: this.markdown }); updateWritingTools()
@@ -67,7 +68,7 @@ class DocumentEditor {
       onSelectionUpdate: () => updateWritingTools()
     })
     this.source = createSourceEditor(this.sourceMount, payload.markdown, value => {
-      if (this.suppress) return
+      if (this.suppress || this.mode === 'rich') return
       this.markdown = value; post({ type: 'change', id: this.id, markdown: value })
       if (this.mode === 'split') this.schedulePreview()
     }, view => {
@@ -93,6 +94,7 @@ class DocumentEditor {
 
   setMode(mode: DocumentPayload['mode']): void {
     if (mode === 'rich' && requiresSourceMode(this.markdown)) { mode = 'source'; post({ type: 'unsupported' }) }
+    const changed = this.mode !== mode
     this.mode = mode
     this.suppress = true
     if (mode === 'rich' && this.richMarkdown !== this.markdown) {
@@ -101,10 +103,18 @@ class DocumentEditor {
       this.source.view.dispatch({ changes: { from: 0, to: this.source.view.state.doc.length, insert: this.markdown } })
     }
     this.suppress = false
+    this.rich.setEditable(mode === 'rich', false)
+    if (this.source.view.state.facet(EditorView.editable) !== (mode !== 'rich')) {
+      this.source.view.dispatch({ effects: this.source.editable.reconfigure(EditorView.editable.of(mode !== 'rich')) })
+    }
     document.body.dataset.mode = mode
     if (mode === 'split') this.schedulePreview()
     bubble.hidden = true; slash.hidden = true
-    requestAnimationFrame(() => this.source.view.requestMeasure())
+    if (changed && active === this) document.querySelector('.find-panel')?.remove()
+    requestAnimationFrame(() => {
+      this.source.view.requestMeasure()
+      if (changed && active === this) focusDocument(this.rich, this.source.view, mode, false)
+    })
   }
 
   handleFiles(files?: FileList | null): boolean {
@@ -180,6 +190,7 @@ function configure(payload: DocumentPayload): void {
 
 function load(payload: DocumentPayload): void {
   let entry = documents.get(payload.id)
+  const created = !entry
   if (!entry) { entry = new DocumentEditor(payload); documents.set(payload.id, entry) }
   else { entry.replace(payload) }
   const switched = active !== entry
@@ -188,7 +199,9 @@ function load(payload: DocumentPayload): void {
   if (richHost.firstChild !== entry.richMount) richHost.replaceChildren(entry.richMount)
   if (sourceHost.firstChild !== entry.sourceMount) sourceHost.replaceChildren(entry.sourceMount)
   configure(payload)
-  if (switched) requestAnimationFrame(() => { if (active === entry) { if (entry.mode === 'rich') entry.rich.commands.focus(); else entry.source.view.focus() } })
+  if (switched) requestAnimationFrame(() => {
+    if (active === entry) focusDocument(entry.rich, entry.source.view, entry.mode, created && payload.startsInBody === true)
+  })
   if (!entry.sourceMount.dataset.events) {
     entry.sourceMount.dataset.events = 'true'
     entry.source.view.scrollDOM.addEventListener('scroll', () => entry?.syncPreviewScroll(), { passive: true })

@@ -14,7 +14,7 @@ public enum AppLanguage: String, Codable, CaseIterable, Identifiable {
 
     // ===== 界面语言独立于主题与文章保存，兼容已有设置 =====
     public static func load(from defaults: UserDefaults = .standard) -> AppLanguage {
-        defaults.string(forKey: preferenceKey).flatMap(AppLanguage.init(rawValue:)) ?? .system
+        defaults.string(forKey: preferenceKey).flatMap(AppLanguage.init(rawValue:)) ?? .english
     }
 
     public func save(to defaults: UserDefaults = .standard) { defaults.set(rawValue, forKey: Self.preferenceKey) }

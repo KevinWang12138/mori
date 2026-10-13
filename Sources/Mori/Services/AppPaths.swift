@@ -3,9 +3,11 @@ import Foundation
 enum AppPaths {
     // ===== 文档截图实例使用独立资料目录，避免读取用户文章和设置 =====
     static let support: URL = {
-        if Bundle.main.bundleIdentifier == "com.kevin.mori.documentation",
-            let directory = ProcessInfo.processInfo.environment["MORI_DOCUMENTATION_DIRECTORY"] {
-            return URL(fileURLWithPath: directory, isDirectory: true)
+        if Bundle.main.bundleIdentifier == "com.kevin.mori.documentation" {
+            if let directory = ProcessInfo.processInfo.environment["MORI_DOCUMENTATION_DIRECTORY"] {
+                return URL(fileURLWithPath: directory, isDirectory: true)
+            }
+            return Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("Support", isDirectory: true)
         }
         return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Mori", isDirectory: true)
     }()

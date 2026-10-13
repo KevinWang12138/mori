@@ -3,6 +3,7 @@ import MoriCore
 
 struct WritingDocument: Identifiable, Equatable {
     var recovery: RecoverableDocument
+    var startsInBody = false
     var conflict = false
     var saveFailure: String?
     var lastSaved: Date?

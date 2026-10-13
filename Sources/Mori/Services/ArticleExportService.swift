@@ -7,6 +7,7 @@ enum ArticleExportFormat { case html, pdf, print }
 final class ArticleExportService: NSObject, WKNavigationDelegate {
     static let shared = ArticleExportService()
     private var printView: WKWebView?
+    private var printOperation: NSPrintOperation?
     private var outputURL: URL?
     private var finish: ((Bool) -> Void)?
     private var showPrintPanel = false
@@ -14,6 +15,11 @@ final class ArticleExportService: NSObject, WKNavigationDelegate {
     // ===== 把本地图片与公式字体嵌入 HTML，导出文件可独立移动 =====
     func standaloneHTML(_ html: String, assets: AssetSchemeHandler) -> String {
         var output = html
+        // ===== 1.本地样式表无法读取 CSSOM 时，直接补齐随应用打包的文章与公式样式 =====
+        if let styles = try? String(contentsOf: AppPaths.web.appendingPathComponent("editor.css"), encoding: .utf8),
+           let styleTag = output.range(of: "<style>") {
+            output.insert(contentsOf: styles + "\n", at: styleTag.upperBound)
+        }
         if let expression = try? NSRegularExpression(pattern: "mori-asset://local[^\"'<>\\s]+") {
             let matches = expression.matches(in: output, range: NSRange(output.startIndex..., in: output))
             for match in matches.reversed() {
@@ -59,7 +65,7 @@ final class ArticleExportService: NSObject, WKNavigationDelegate {
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { complete(false) }
 
     private func runPrintOperation() {
-        guard let printView else { complete(false); return }
+        guard let printView, let window = NSApp.keyWindow ?? NSApp.mainWindow else { complete(false); return }
         let info = NSPrintInfo()
         info.paperSize = NSSize(width: 595.28, height: 841.89)
         info.topMargin = 50; info.bottomMargin = 50; info.leftMargin = 44; info.rightMargin = 44
@@ -68,12 +74,18 @@ final class ArticleExportService: NSObject, WKNavigationDelegate {
         if let outputURL { info.jobDisposition = .save; info.dictionary()[NSPrintInfo.AttributeKey.jobSavingURL] = outputURL }
         let operation = printView.printOperation(with: info)
         operation.showsPrintPanel = showPrintPanel; operation.showsProgressPanel = false
-        let success = operation.run()
+        // ===== 1.WebKit 分页需要异步窗口打印循环，避免同步打印无限生成页面 =====
+        printOperation = operation
+        operation.runModal(for: window, delegate: self, didRun: #selector(printOperationDidRun(_:success:contextInfo:)), contextInfo: nil)
+    }
+
+    // ===== 打印结束后释放导出资源，再通知文章窗口 =====
+    @objc private func printOperationDidRun(_ operation: NSPrintOperation, success: Bool, contextInfo: UnsafeMutableRawPointer?) {
         complete(success)
     }
 
     private func complete(_ success: Bool) {
-        let callback = finish; finish = nil; printView?.navigationDelegate = nil; printView = nil; outputURL = nil
+        let callback = finish; finish = nil; printView?.navigationDelegate = nil; printView = nil; printOperation = nil; outputURL = nil
         callback?(success)
     }
 }

@@ -45,7 +45,7 @@ struct WorkspaceView: View {
     }
 
     private var errorBinding: Binding<Bool> {
-        Binding(get: { store.errorMessage != nil || preferences.errorMessage != nil }, set: { if !$0 { clearErrors() } })
+        Binding(get: { store.errorMessage != nil || (!store.showAppearance && preferences.errorMessage != nil) }, set: { if !$0 { clearErrors() } })
     }
 
     private func clearErrors() { store.errorMessage = nil; preferences.errorMessage = nil }

@@ -5,8 +5,8 @@ import type { Editor as TiptapEditor } from '@tiptap/core'
 
 let createEditor: (markdown: string) => TiptapEditor
 before(async () => {
-  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://local.invalid' })
-  for (const key of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'Element', 'MutationObserver', 'DOMParser', 'getComputedStyle', 'CustomEvent']) {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://local.invalid', pretendToBeVisual: true })
+  for (const key of ['window', 'Window', 'document', 'navigator', 'Node', 'HTMLElement', 'Element', 'MutationObserver', 'DOMParser', 'getComputedStyle', 'CustomEvent']) {
     Object.defineProperty(globalThis, key, { value: Reflect.get(dom.window, key), configurable: true })
   }
   Object.defineProperty(globalThis, 'requestAnimationFrame', { value: (callback: FrameRequestCallback) => setTimeout(callback, 0), configurable: true })
@@ -101,4 +101,38 @@ test('所见即所得语言切换保留文章、选区与撤销，代码工具�
   assert.equal(input.placeholder, 'Code language'); assert.equal(input.value, 'swift')
   assert.ok(editor.commands.undo()); assert.ok(editor.getMarkdown().startsWith('# 中文标题'))
   editor.destroy()
+})
+
+test('新建文章直接输入落在正文，切回已有文章保留光标', async () => {
+  const { focusDocument } = await import('../src/editor-focus')
+  const { createSourceEditor } = await import('../src/source-editor')
+  const editor = createEditor('# Manual QA Article\n\n')
+  const source = createSourceEditor(document.createElement('div'), '# Manual QA Article\n\n', () => {}, () => {})
+  try {
+    focusDocument(editor, source.view, 'rich', true)
+    editor.commands.insertContent('My first paragraph.')
+    assert.equal(editor.state.doc.firstChild?.textContent, 'Manual QA Article')
+    assert.ok(editor.getMarkdown().includes('\n\nMy first paragraph.'))
+    editor.commands.setTextSelection(3)
+    const selection = editor.state.selection.toJSON()
+    focusDocument(editor, source.view, 'rich', false)
+    assert.deepEqual(editor.state.selection.toJSON(), selection)
+  } finally { source.view.destroy(); editor.destroy() }
+})
+
+test('源码新文章从正文开始，首行元信息与已有选区不被改动', async () => {
+  const { focusDocument } = await import('../src/editor-focus')
+  const { createSourceEditor } = await import('../src/source-editor')
+  const original = '---\ntitle: "Manual QA Article"\ndraft: true\n---\n\n# Manual QA Article\n\n'
+  const editor = createEditor('# Manual QA Article\n\n')
+  const source = createSourceEditor(document.createElement('div'), original, () => {}, () => {})
+  try {
+    focusDocument(editor, source.view, 'source', true)
+    const position = source.view.state.selection.main.head
+    source.view.dispatch({ changes: { from: position, insert: 'My first paragraph.' } })
+    assert.equal(source.view.state.doc.toString(), original + 'My first paragraph.')
+    source.view.dispatch({ selection: { anchor: 3 } })
+    focusDocument(editor, source.view, 'split', false)
+    assert.equal(source.view.state.selection.main.anchor, 3)
+  } finally { source.view.destroy(); editor.destroy() }
 })

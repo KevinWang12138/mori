@@ -57,15 +57,16 @@ export function configureSourceLanguage(view: EditorView, compartment: Compartme
 }
 
 export function createSourceEditor(parent: HTMLElement, content: string, onChange: (value: string) => void,
-  onSelection: (view: EditorView) => void): { view: EditorView; numbers: Compartment; language: Compartment } {
+  onSelection: (view: EditorView) => void): { view: EditorView; numbers: Compartment; language: Compartment; editable: Compartment } {
   const numbers = new Compartment()
   const language = new Compartment()
+  const editable = new Compartment()
   const view = new EditorView({
     parent,
     state: EditorState.create({ doc: content, extensions: [
       markdown(), syntaxHighlighting(defaultHighlightStyle), history(), search({ top: true }),
       highlightActiveLine(), highlightSelectionMatches(), closeBrackets(), EditorView.lineWrapping,
-      indentUnit.of('  '), numbers.of(lineNumbers()),
+      indentUnit.of('  '), numbers.of(lineNumbers()), editable.of(EditorView.editable.of(true)),
       language.of(sourceLanguageExtension(editorLanguage())),
       keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       EditorView.updateListener.of(update => {
@@ -74,5 +75,5 @@ export function createSourceEditor(parent: HTMLElement, content: string, onChang
       })
     ] })
   })
-  return { view, numbers, language }
+  return { view, numbers, language, editable }
 }

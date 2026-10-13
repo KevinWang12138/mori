@@ -30,7 +30,7 @@ struct WallpaperView: View {
                 }
                 Color(hex: preferences.overlayColor).opacity(preferences.wallpaper == .none ? 0 : preferences.overlayOpacity)
             }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
-        }.ignoresSafeArea()
+        }.ignoresSafeArea().allowsHitTesting(false)
     }
 
     @ViewBuilder

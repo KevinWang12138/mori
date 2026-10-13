@@ -14,8 +14,10 @@ struct BackgroundControls: View {
                                     .overlay { RoundedRectangle(cornerRadius: 6).stroke(Color(hex: theme.accent).opacity(preferences.value.theme == theme ? 1 : 0.15), lineWidth: preferences.value.theme == theme ? 2 : 1) }
                                     .frame(height: 50)
                                 Text(theme.label).font(.system(size: 10))
-                            }.frame(maxWidth: .infinity)
+                            }.frame(maxWidth: .infinity).contentShape(Rectangle())
                         }.buttonStyle(.plain)
+                            .accessibilityLabel(theme.label)
+                            .accessibilityAddTraits(preferences.value.theme == theme ? .isSelected : [])
                     }
                 }
             }

@@ -35,7 +35,7 @@ struct AppearancePanel: View {
                             else if tab == 1 { typographyControls }
                             else { writingControls }
                         }.padding(.horizontal, 24).padding(.bottom, 25)
-                    }
+                    }.id(tab)
                 }.frame(width: 385)
                 Divider().opacity(0.4)
                 AppearancePreview().padding(24).frame(maxWidth: .infinity)
@@ -45,6 +45,13 @@ struct AppearancePanel: View {
         .background(Color(hex: value.theme.surface))
         .preferredColorScheme(value.theme.scheme)
         .tint(Color(hex: value.theme.accent))
+        .alert(L10n.text("操作未完成"), isPresented: errorBinding) {
+            Button(L10n.text("知道了"), role: .cancel) { preferences.errorMessage = nil }
+        } message: { Text(L10n.text(preferences.errorMessage ?? "")) }
+    }
+
+    private var errorBinding: Binding<Bool> {
+        Binding(get: { preferences.errorMessage != nil }, set: { if !$0 { preferences.errorMessage = nil } })
     }
 
     private var typographyControls: some View {
