@@ -1,0 +1,303 @@
+import { Editor } from '@tiptap/core'
+import StarterKit from '@tiptap/starter-kit'
+import { Markdown } from '@tiptap/markdown'
+import { TableKit } from '@tiptap/extension-table'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Placeholder from '@tiptap/extension-placeholder'
+import { lineNumbers, EditorView } from '@codemirror/view'
+import { BlockMath, InlineMath, LocalImage, CodeBlock, HeadingAnchors, configureAssetDirectory } from './extensions'
+import { splitFrontMatter, requiresSourceMode, safeLink } from './document'
+import { createSourceEditor } from './source-editor'
+import { post, type DocumentPayload, type EditorSettings } from './bridge'
+import { renderMarkdown, renderDiagrams } from './renderer'
+import { formatRich, formatSource } from './formatting'
+import { findInRich, insertItems } from './writing-tools'
+import { readMetadata, updateMetadata } from './metadata'
+import './style.css'
+import 'katex/dist/katex.min.css'
+
+const richHost = document.querySelector<HTMLElement>('#rich')!
+const sourceHost = document.querySelector<HTMLElement>('#source')!
+const preview = document.querySelector<HTMLElement>('#preview')!
+const bubble = document.querySelector<HTMLElement>('#bubble')!
+const slash = document.querySelector<HTMLElement>('#slash')!
+const customStyle = document.createElement('style'); customStyle.id = 'custom-theme'; document.head.append(customStyle)
+let active: DocumentEditor | undefined
+let settings: EditorSettings | undefined
+const documents = new Map<string, DocumentEditor>()
+
+class DocumentEditor {
+  readonly id: string
+  markdown: string
+  directory: string
+  mode: DocumentPayload['mode']
+  readonly richMount = document.createElement('div')
+  readonly sourceMount = document.createElement('div')
+  readonly rich: Editor
+  readonly source: ReturnType<typeof createSourceEditor>
+  private suppress = false
+  private richMarkdown: string
+  private previewTimer?: ReturnType<typeof setTimeout>
+  private previewSequence = 0
+
+  constructor(payload: DocumentPayload) {
+    this.suppress = true
+    this.id = payload.id; this.markdown = payload.markdown; this.richMarkdown = payload.markdown
+    this.directory = payload.directory; this.mode = payload.mode
+    this.richMount.className = 'rich-document markdown-content'; this.sourceMount.className = 'source-document'
+    this.rich = new Editor({
+      element: this.richMount,
+      extensions: [StarterKit.configure({ codeBlock: false, link: { openOnClick: false, autolink: true } }),
+        Markdown.configure({ markedOptions: { gfm: true, breaks: false }, indentation: { style: 'space', size: 2 } }),
+        TableKit.configure({ table: { resizable: true } }), TaskList, TaskItem.configure({ nested: true }),
+        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, Placeholder.configure({ placeholder: '把想法写下来，或输入 / 插入内容…' })],
+      content: requiresSourceMode(payload.markdown) ? '' : splitFrontMatter(payload.markdown).body, contentType: 'markdown',
+      editorProps: { attributes: { 'aria-label': '文章所见即所得编辑器', spellcheck: 'true' },
+        handlePaste: (_view, event) => this.handleFiles(event.clipboardData?.files),
+        handleDrop: (_view, event) => this.handleFiles(event.dataTransfer?.files)
+      },
+      onUpdate: () => {
+        if (this.suppress) return
+        this.markdown = splitFrontMatter(this.markdown).prefix + this.rich.getMarkdown() + '\n'
+        this.richMarkdown = this.markdown
+        post({ type: 'change', id: this.id, markdown: this.markdown }); updateWritingTools()
+      },
+      onSelectionUpdate: () => updateWritingTools()
+    })
+    this.source = createSourceEditor(this.sourceMount, payload.markdown, value => {
+      if (this.suppress) return
+      this.markdown = value; post({ type: 'change', id: this.id, markdown: value })
+      if (this.mode === 'split') this.schedulePreview()
+    }, view => {
+      if (settings?.typewriterMode) requestAnimationFrame(() => view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }) }))
+      this.syncPreviewScroll()
+    })
+    this.suppress = false
+  }
+
+  // ===== 外部内容替换只更新编辑器状态，不触发保存回写 =====
+  replace(payload: DocumentPayload): void {
+    const changed = this.markdown !== payload.markdown || this.directory !== payload.directory
+    this.directory = payload.directory
+    if (!changed) return
+    this.suppress = true; this.markdown = payload.markdown
+    this.source.view.dispatch({ changes: { from: 0, to: this.source.view.state.doc.length, insert: payload.markdown } })
+    if (!requiresSourceMode(payload.markdown)) {
+      this.rich.commands.setContent(splitFrontMatter(payload.markdown).body, { contentType: 'markdown', emitUpdate: false })
+      this.richMarkdown = payload.markdown
+    }
+    this.suppress = false
+  }
+
+  setMode(mode: DocumentPayload['mode']): void {
+    if (mode === 'rich' && requiresSourceMode(this.markdown)) { mode = 'source'; post({ type: 'unsupported' }) }
+    this.mode = mode
+    this.suppress = true
+    if (mode === 'rich' && this.richMarkdown !== this.markdown) {
+      this.rich.commands.setContent(splitFrontMatter(this.markdown).body, { contentType: 'markdown', emitUpdate: false }); this.richMarkdown = this.markdown
+    } else if (mode !== 'rich' && this.source.view.state.doc.toString() !== this.markdown) {
+      this.source.view.dispatch({ changes: { from: 0, to: this.source.view.state.doc.length, insert: this.markdown } })
+    }
+    this.suppress = false
+    document.body.dataset.mode = mode
+    if (mode === 'split') this.schedulePreview()
+    bubble.hidden = true; slash.hidden = true
+    requestAnimationFrame(() => this.source.view.requestMeasure())
+  }
+
+  handleFiles(files?: FileList | null): boolean {
+    if (!files?.length) return false
+    const images = [...files].filter(file => file.type.startsWith('image/'))
+    if (!images.length) return false
+    for (const file of images) {
+      if (file.size > 25 * 1024 * 1024) { post({ type: 'error' }); continue }
+      const reader = new FileReader()
+      reader.onload = () => post({ type: 'asset', id: this.id, name: file.name, data: String(reader.result).split(',')[1] })
+      reader.readAsDataURL(file)
+    }
+    return true
+  }
+
+  schedulePreview(): void {
+    if (this.previewTimer) clearTimeout(this.previewTimer)
+    this.previewTimer = setTimeout(() => { void this.updatePreview() }, 120)
+  }
+
+  async updatePreview(): Promise<void> {
+    const sequence = ++this.previewSequence
+    const staging = document.createElement('article'); staging.className = 'markdown-content'
+    staging.innerHTML = renderMarkdown(this.markdown, this.directory)
+    await renderDiagrams(staging, settings?.theme === 'night')
+    if (active !== this || sequence !== this.previewSequence) return
+    const scroll = preview.scrollTop; preview.replaceChildren(staging); preview.scrollTop = scroll
+  }
+
+  syncPreviewScroll(): void {
+    if (this.mode !== 'split') return
+    const sourceScroll = this.source.view.scrollDOM
+    const ratio = sourceScroll.scrollTop / Math.max(1, sourceScroll.scrollHeight - sourceScroll.clientHeight)
+    preview.scrollTop = ratio * Math.max(0, preview.scrollHeight - preview.clientHeight)
+  }
+
+  dispose(): void { this.rich.destroy(); this.source.view.destroy(); if (this.previewTimer) clearTimeout(this.previewTimer) }
+}
+
+configureAssetDirectory(() => active?.directory ?? '')
+
+function configure(payload: DocumentPayload): void {
+  settings = payload.settings
+  const css = document.documentElement.style
+  const config = payload.settings
+  document.documentElement.dataset.theme = config.theme
+  css.setProperty('--text', config.text); css.setProperty('--muted', config.muted); css.setProperty('--accent', config.accent)
+  css.setProperty('--surface', config.surface); css.setProperty('--font', config.font)
+  css.setProperty('--font-size', `${config.fontSize}px`); css.setProperty('--line-height', String(config.lineHeight))
+  css.setProperty('--page-width', `${config.pageWidth}px`)
+  const color = config.surface.replace('#', '')
+  css.setProperty('--paper', `rgba(${parseInt(color.slice(0, 2), 16)},${parseInt(color.slice(2, 4), 16)},${parseInt(color.slice(4, 6), 16)},${config.paperOpacity})`)
+  document.body.classList.toggle('focus-mode', config.focusMode); document.body.classList.toggle('typewriter-mode', config.typewriterMode)
+  customStyle.textContent = config.customCSS
+  if (active) {
+    active.rich.view.dom.setAttribute('spellcheck', String(config.spellcheck))
+    active.source.view.dispatch({ effects: active.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : []) })
+    active.setMode(payload.mode); updateWritingTools()
+  }
+}
+
+function load(payload: DocumentPayload): void {
+  let entry = documents.get(payload.id)
+  if (!entry) { entry = new DocumentEditor(payload); documents.set(payload.id, entry) }
+  else { entry.replace(payload) }
+  const switched = active !== entry
+  if (switched) document.querySelector('.find-panel')?.remove()
+  active = entry
+  if (richHost.firstChild !== entry.richMount) richHost.replaceChildren(entry.richMount)
+  if (sourceHost.firstChild !== entry.sourceMount) sourceHost.replaceChildren(entry.sourceMount)
+  configure(payload)
+  if (switched) requestAnimationFrame(() => { if (active === entry) { if (entry.mode === 'rich') entry.rich.commands.focus(); else entry.source.view.focus() } })
+  if (!entry.sourceMount.dataset.events) {
+    entry.sourceMount.dataset.events = 'true'
+    entry.source.view.scrollDOM.addEventListener('scroll', () => entry?.syncPreviewScroll(), { passive: true })
+    entry.source.view.contentDOM.addEventListener('paste', event => { if (entry?.handleFiles(event.clipboardData?.files)) event.preventDefault() })
+    entry.source.view.contentDOM.addEventListener('drop', event => { if (entry?.handleFiles(event.dataTransfer?.files)) event.preventDefault() })
+  }
+}
+
+function command(name: string, payload: Record<string, unknown> = {}): void {
+  if (name === 'dispose') {
+    const id = String(payload.id); documents.get(id)?.dispose(); documents.delete(id); return
+  }
+  if (!active) return
+  if (name === 'find') {
+    if (active.mode === 'rich') findInRich(active.rich)
+    else formatSource(active.source.view, name, payload)
+  } else if (name === 'jump') {
+    if (active.mode === 'rich') {
+      let index = 0; const desired = Number(payload.index)
+      active.rich.state.doc.descendants((node, pos) => {
+        if (node.type.name !== 'heading') return
+        if (index++ === desired) active?.rich.commands.setTextSelection(pos + 1)
+      })
+      active.rich.commands.scrollIntoView(); active.rich.commands.focus()
+    } else {
+      const line = active.source.view.state.doc.line(Math.max(1, Math.min(Number(payload.line), active.source.view.state.doc.lines)))
+      active.source.view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true }); active.source.view.focus()
+    }
+  } else if (name === 'setMetadata') {
+    const replacement = updateMetadata(active.markdown, payload)
+    if (replacement === null) { post({ type: 'error' }); return }
+    active.replace({ id: active.id, markdown: replacement, directory: active.directory, mode: active.mode, settings: settings! })
+    post({ type: 'change', id: active.id, markdown: replacement }); if (active.mode === 'split') active.schedulePreview()
+  } else {
+    if (active.mode === 'rich') formatRich(active.rich, name, payload)
+    else formatSource(active.source.view, name, payload)
+  }
+}
+
+function toolButton(label: string, name: string, symbol: string): HTMLButtonElement {
+  const button = document.createElement('button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label)
+  button.textContent = symbol; button.addEventListener('mousedown', event => event.preventDefault())
+  button.onclick = () => command(name); return button
+}
+
+for (const [label, name, symbol] of [['加粗', 'bold', 'B'], ['斜体', 'italic', 'I'], ['删除线', 'strike', 'S'], ['行内代码', 'code', '</>'], ['链接', 'link', '↗']]) {
+  bubble.append(toolButton(label, name, symbol))
+}
+for (const item of insertItems) {
+  const button = toolButton(item.label, item.name, item.symbol + '  ' + item.label)
+  button.onclick = () => {
+    if (!active) return
+    const { $from } = active.rich.state.selection
+    active.rich.chain().deleteRange({ from: $from.start(), to: $from.pos }).run()
+    command(item.name); slash.hidden = true
+  }
+  slash.append(button)
+}
+bubble.hidden = true; slash.hidden = true
+
+function updateWritingTools(): void {
+  if (!active || active.mode !== 'rich') return
+  const { from, to, $from } = active.rich.state.selection
+  const coords = active.rich.view.coordsAtPos(from)
+  bubble.hidden = from === to || active.rich.isActive('codeBlock') || !active.rich.view.hasFocus()
+  if (!bubble.hidden) { bubble.style.top = `${Math.max(4, coords.top - 46)}px`; bubble.style.left = `${Math.max(8, Math.min(window.innerWidth - 230, coords.left))}px` }
+  const text = $from.parent.textContent
+  slash.hidden = !/^\/[\p{L}\p{N}]*$/u.test(text) || !$from.parent.isTextblock
+  if (!slash.hidden) {
+    const query = text.slice(1).toLocaleLowerCase()
+    for (const [index, child] of [...slash.children].entries()) (child as HTMLElement).hidden = !!query && !insertItems[index].label.includes(query) && !insertItems[index].name.includes(query)
+    slash.style.top = `${Math.min(window.innerHeight - 360, coords.bottom + 10)}px`
+    slash.style.left = `${Math.min(window.innerWidth - 230, Math.max(8, coords.left))}px`
+  }
+  for (const child of [...active.rich.view.dom.children]) child.classList.remove('active-paragraph')
+  const selectionDOM = active.rich.view.domAtPos(from).node
+  let element = selectionDOM instanceof HTMLElement ? selectionDOM : selectionDOM.parentElement
+  while (element && element.parentElement !== active.rich.view.dom) element = element.parentElement
+  element?.classList.add('active-paragraph')
+  if (settings?.typewriterMode) requestAnimationFrame(() => {
+    if (!active) return
+    const next = active.rich.view.coordsAtPos(active.rich.state.selection.from)
+    const bounds = richHost.getBoundingClientRect()
+    richHost.scrollTop += next.top - bounds.top - bounds.height * 0.42
+  })
+}
+
+document.addEventListener('click', event => {
+  const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
+  if (!anchor) return
+  event.preventDefault()
+  const href = anchor.getAttribute('href') ?? ''
+  if (href.startsWith('#')) {
+    try { const id = decodeURIComponent(href.slice(1)); document.getElementById(id)?.scrollIntoView({ block: 'center' }) } catch { return }
+  } else if (/^(https?:|mailto:)/i.test(href) && safeLink(href)) {
+    if (active?.mode !== 'rich' || event.metaKey) post({ type: 'openURL', url: href })
+  } else if (/\.(?:md|markdown)(?:#.*)?$/i.test(href)) { post({ type: 'openArticle', path: href }) }
+})
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { bubble.hidden = true; slash.hidden = true }
+  if (event.key === 'ArrowDown' && !slash.hidden) { (slash.querySelector('button:not([hidden])') as HTMLButtonElement)?.focus(); event.preventDefault() }
+})
+
+window.Mori = {
+  load, configure, command,
+  metadata: () => readMetadata(active?.markdown ?? ''),
+  flush: () => ({ id: active?.id ?? '', markdown: active?.markdown ?? '' }),
+  async exportHTML() {
+    if (!active) return ''
+    const rendered = document.createElement('article'); rendered.className = 'markdown-content'
+    rendered.innerHTML = renderMarkdown(active.markdown, active.directory)
+    await renderDiagrams(rendered, false)
+    const styles = [...document.styleSheets].filter(sheet => sheet.ownerNode !== customStyle)
+      .flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText) } catch { return [] } }).join('\n')
+    const title = rendered.querySelector('h1')?.textContent ?? '文章'
+    const safeTitle = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    return `<!doctype html><html lang="zh-CN" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportStyles}</style></head><body>${rendered.outerHTML}</body></html>`
+  }
+}
+
+const exportStyles = `:root{--text:#28362e;--muted:#778377;--accent:#3f654f;--surface:#fffefa;--paper:#fffefa;--font:'Iowan Old Style','Songti SC',serif;--font-size:18px;--line-height:1.85;--page-width:760px}html,body{height:auto!important;overflow:visible!important;background:#fffefa!important;color:#28362e!important}.markdown-content{max-width:760px;margin:0 auto;padding:50px 40px;box-shadow:none!important;border:none!important;min-height:0!important}pre,blockquote,table,img,.mermaid-output{break-inside:avoid}h1,h2,h3{break-after:avoid}@media print{.markdown-content{padding:0;max-width:none}@page{size:A4;margin:20mm}}`
+
+window.addEventListener('error', () => post({ type: 'error' }))
+post({ type: 'ready' })

@@ -1,0 +1,7 @@
+Sources/Mori/Resources/Web/** linguist-generated=true -diff -whitespace
+THIRD_PARTY_NOTICES.md linguist-generated=true
+Web/package-lock.json linguist-generated=true
+*.png binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
