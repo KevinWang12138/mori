@@ -8,12 +8,13 @@ import Placeholder from '@tiptap/extension-placeholder'
 import { lineNumbers, EditorView } from '@codemirror/view'
 import { BlockMath, InlineMath, LocalImage, CodeBlock, HeadingAnchors, configureAssetDirectory } from './extensions'
 import { splitFrontMatter, requiresSourceMode, safeLink } from './document'
-import { createSourceEditor } from './source-editor'
+import { createSourceEditor, configureSourceLanguage } from './source-editor'
 import { post, type DocumentPayload, type EditorSettings } from './bridge'
 import { renderMarkdown, renderDiagrams } from './renderer'
 import { formatRich, formatSource } from './formatting'
 import { findInRich, insertItems } from './writing-tools'
 import { readMetadata, updateMetadata } from './metadata'
+import { editorLanguage, localize, setEditorLanguage, t } from './i18n'
 import './style.css'
 import 'katex/dist/katex.min.css'
 
@@ -51,9 +52,9 @@ class DocumentEditor {
       extensions: [StarterKit.configure({ codeBlock: false, link: { openOnClick: false, autolink: true } }),
         Markdown.configure({ markedOptions: { gfm: true, breaks: false }, indentation: { style: 'space', size: 2 } }),
         TableKit.configure({ table: { resizable: true } }), TaskList, TaskItem.configure({ nested: true }),
-        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, Placeholder.configure({ placeholder: '把想法写下来，或输入 / 插入内容…' })],
+        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, Placeholder.configure({ placeholder: () => t('把想法写下来，或输入 / 插入内容…') })],
       content: requiresSourceMode(payload.markdown) ? '' : splitFrontMatter(payload.markdown).body, contentType: 'markdown',
-      editorProps: { attributes: { 'aria-label': '文章所见即所得编辑器', spellcheck: 'true' },
+      editorProps: { attributes: { 'aria-label': t('文章所见即所得编辑器'), spellcheck: 'true' },
         handlePaste: (_view, event) => this.handleFiles(event.clipboardData?.files),
         handleDrop: (_view, event) => this.handleFiles(event.dataTransfer?.files)
       },
@@ -149,6 +150,17 @@ function configure(payload: DocumentPayload): void {
   settings = payload.settings
   const css = document.documentElement.style
   const config = payload.settings
+  const languageChanged = editorLanguage() !== config.language
+  setEditorLanguage(config.language)
+  if (languageChanged) {
+    for (const entry of documents.values()) {
+      entry.rich.setOptions({ editorProps: { ...entry.rich.options.editorProps,
+        attributes: { 'aria-label': t('文章所见即所得编辑器'), spellcheck: String(config.spellcheck) } } })
+      entry.rich.view.dispatch(entry.rich.state.tr.setMeta('mori-language-change', true))
+      if (entry !== active) configureSourceLanguage(entry.source.view, entry.source.language, config.language)
+    }
+  }
+  for (const [index, button] of [...slash.children].entries()) button.textContent = insertItems[index].symbol + '  ' + t(insertItems[index].label)
   document.documentElement.dataset.theme = config.theme
   css.setProperty('--text', config.text); css.setProperty('--muted', config.muted); css.setProperty('--accent', config.accent)
   css.setProperty('--surface', config.surface); css.setProperty('--font', config.font)
@@ -160,7 +172,8 @@ function configure(payload: DocumentPayload): void {
   customStyle.textContent = config.customCSS
   if (active) {
     active.rich.view.dom.setAttribute('spellcheck', String(config.spellcheck))
-    active.source.view.dispatch({ effects: active.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : []) })
+    configureSourceLanguage(active.source.view, active.source.language, config.language,
+      [active.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : [])])
     active.setMode(payload.mode); updateWritingTools()
   }
 }
@@ -216,7 +229,7 @@ function command(name: string, payload: Record<string, unknown> = {}): void {
 }
 
 function toolButton(label: string, name: string, symbol: string): HTMLButtonElement {
-  const button = document.createElement('button'); button.type = 'button'; button.title = label; button.setAttribute('aria-label', label)
+  const button = document.createElement('button'); button.type = 'button'; localize(button, { title: label, aria: label })
   button.textContent = symbol; button.addEventListener('mousedown', event => event.preventDefault())
   button.onclick = () => command(name); return button
 }
@@ -225,7 +238,7 @@ for (const [label, name, symbol] of [['加粗', 'bold', 'B'], ['斜体', 'italic
   bubble.append(toolButton(label, name, symbol))
 }
 for (const item of insertItems) {
-  const button = toolButton(item.label, item.name, item.symbol + '  ' + item.label)
+  const button = toolButton(item.label, item.name, item.symbol + '  ' + t(item.label))
   button.onclick = () => {
     if (!active) return
     const { $from } = active.rich.state.selection
@@ -246,7 +259,7 @@ function updateWritingTools(): void {
   slash.hidden = !/^\/[\p{L}\p{N}]*$/u.test(text) || !$from.parent.isTextblock
   if (!slash.hidden) {
     const query = text.slice(1).toLocaleLowerCase()
-    for (const [index, child] of [...slash.children].entries()) (child as HTMLElement).hidden = !!query && !insertItems[index].label.includes(query) && !insertItems[index].name.includes(query)
+    for (const [index, child] of [...slash.children].entries()) (child as HTMLElement).hidden = !!query && !t(insertItems[index].label).toLocaleLowerCase().includes(query) && !insertItems[index].name.includes(query)
     slash.style.top = `${Math.min(window.innerHeight - 360, coords.bottom + 10)}px`
     slash.style.left = `${Math.min(window.innerWidth - 230, Math.max(8, coords.left))}px`
   }
@@ -291,9 +304,9 @@ window.Mori = {
     await renderDiagrams(rendered, false)
     const styles = [...document.styleSheets].filter(sheet => sheet.ownerNode !== customStyle)
       .flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText) } catch { return [] } }).join('\n')
-    const title = rendered.querySelector('h1')?.textContent ?? '文章'
+    const title = rendered.querySelector('h1')?.textContent ?? t('文章')
     const safeTitle = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    return `<!doctype html><html lang="zh-CN" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportStyles}</style></head><body>${rendered.outerHTML}</body></html>`
+    return `<!doctype html><html lang="${editorLanguage()}" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportStyles}</style></head><body>${rendered.outerHTML}</body></html>`
   }
 }
 

@@ -7,6 +7,7 @@ import hljs from 'highlight.js'
 import DOMPurify from 'dompurify'
 import mermaid from 'mermaid'
 import { assetURL, safeLink, splitFrontMatter, headingID } from './document'
+import { localize } from './i18n'
 
 const md: MarkdownIt = new MarkdownIt({ html: true, linkify: true, typographer: false,
   highlight(code, language): string {
@@ -64,7 +65,7 @@ export async function renderDiagrams(container: HTMLElement, dark: boolean): Pro
       const { svg } = await mermaid.render(`mori-diagram-${++diagramSequence}`, source)
       preview.innerHTML = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })
       if (container.contains(code)) code.closest('pre')?.replaceWith(preview)
-    } catch { code.closest('pre')?.setAttribute('aria-label', '图表语法尚未完成') }
+    } catch { const pre = code.closest('pre'); if (pre) localize(pre, { aria: '图表语法尚未完成' }) }
   }))
 }
 
@@ -73,6 +74,9 @@ export async function renderDiagram(source: string, target: HTMLElement): Promis
   try {
     mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: document.documentElement.dataset.theme === 'night' ? 'dark' : 'neutral', suppressErrorRendering: true })
     const { svg } = await mermaid.render(`mori-block-${sequence}`, source)
-    if (target.dataset.generation === sequence) target.innerHTML = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })
-  } catch { if (target.dataset.generation === sequence) target.textContent = '图表语法尚未完成，继续编辑代码。' }
+    if (target.dataset.generation === sequence) {
+      target.removeAttribute('data-i18n-text')
+      target.innerHTML = DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } })
+    }
+  } catch { if (target.dataset.generation === sequence) localize(target, { text: '图表语法尚未完成，继续编辑代码。' }) }
 }

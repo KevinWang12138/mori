@@ -39,8 +39,8 @@ struct WorkspaceView: View {
         .preferredColorScheme(appearance.theme.scheme)
         .sheet(isPresented: $store.showAppearance) { AppearancePanel().environmentObject(preferences) }
         .sheet(isPresented: $store.showNewArticle) { NewArticleSheet().environmentObject(store) }
-        .alert("操作未完成", isPresented: errorBinding) { Button("知道了", role: .cancel) { clearErrors() } } message: {
-            Text(store.errorMessage ?? preferences.errorMessage ?? "")
+        .alert(L10n.text("操作未完成"), isPresented: errorBinding) { Button(L10n.text("知道了"), role: .cancel) { clearErrors() } } message: {
+            Text(L10n.text(store.errorMessage ?? preferences.errorMessage ?? ""))
         }
     }
 
@@ -56,11 +56,11 @@ private struct EmptyWorkspaceView: View {
     var body: some View {
         VStack(spacing: 18) {
             Image(systemName: "leaf").font(.system(size: 34, weight: .ultraLight)).foregroundStyle(.secondary)
-            Text("把想法写下来").font(.custom("IowanOldStyle-Roman", size: 29))
-            Text("从一张空白纸开始，或打开你的博客文章。").font(.system(size: 13)).foregroundStyle(.secondary)
+            Text(L10n.text("把想法写下来")).font(.custom("IowanOldStyle-Roman", size: 29))
+            Text(L10n.text("从一张空白纸开始，或打开你的博客文章。")).font(.system(size: 13)).foregroundStyle(.secondary)
             HStack(spacing: 12) {
-                Button("新建文章") { store.showNewArticle = true }.buttonStyle(.borderedProminent)
-                Button("打开文章", action: store.openPanel).buttonStyle(.bordered)
+                Button(L10n.text("新建文章")) { store.showNewArticle = true }.buttonStyle(.borderedProminent)
+                Button(L10n.text("打开文章"), action: store.openPanel).buttonStyle(.bordered)
             }.padding(.top, 8)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -71,10 +71,10 @@ private struct ConflictBanner: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle")
-            Text("磁盘文件已改变。当前稿件已保留。").font(.system(size: 12))
+            Text(L10n.text("磁盘文件已改变。当前稿件已保留。")).font(.system(size: 12))
             Spacer()
-            Button("载入磁盘版本", action: store.reloadExternalFile).buttonStyle(.borderless)
-            Button("另存当前稿件") { store.saveActive(asNewFile: true) }.buttonStyle(.borderless)
+            Button(L10n.text("载入磁盘版本"), action: store.reloadExternalFile).buttonStyle(.borderless)
+            Button(L10n.text("另存当前稿件")) { store.saveActive(asNewFile: true) }.buttonStyle(.borderless)
         }.padding(.horizontal, 24).padding(.vertical, 10).foregroundStyle(Color(hex: "#8C662D"))
             .background(Color(hex: "#E8CB8A").opacity(0.18))
     }

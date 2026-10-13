@@ -6,38 +6,38 @@ struct FormattingToolbar: View {
     var body: some View {
         HStack(spacing: 3) {
             Menu {
-                Button("正文") { format("paragraph") }
-                Button("一级标题") { format("heading1") }
-                Button("二级标题") { format("heading2") }
-                Button("三级标题") { format("heading3") }
+                Button(L10n.text("正文")) { format("paragraph") }
+                Button(L10n.text("一级标题")) { format("heading1") }
+                Button(L10n.text("二级标题")) { format("heading2") }
+                Button(L10n.text("三级标题")) { format("heading3") }
             } label: { Text("Aa").font(.custom("IowanOldStyle-Roman", size: 16)).frame(width: 37, height: 26) }
-                .menuStyle(.borderlessButton).fixedSize().help("段落样式")
+                .menuStyle(.borderlessButton).fixedSize().help(L10n.text("段落样式"))
             Divider().frame(height: 15).padding(.horizontal, 8)
-            IconButton("加粗 ⌘B", icon: "bold") { format("bold") }
-            IconButton("斜体 ⌘I", icon: "italic") { format("italic") }
-            IconButton("删除线", icon: "strikethrough") { format("strike") }
-            IconButton("插入链接 ⌘K", icon: "link") { format("link") }
-            IconButton("插入图片", icon: "photo", action: store.chooseImage)
+            IconButton(L10n.text("加粗 ⌘B"), icon: "bold") { format("bold") }
+            IconButton(L10n.text("斜体 ⌘I"), icon: "italic") { format("italic") }
+            IconButton(L10n.text("删除线"), icon: "strikethrough") { format("strike") }
+            IconButton(L10n.text("插入链接 ⌘K"), icon: "link") { format("link") }
+            IconButton(L10n.text("插入图片"), icon: "photo", action: store.chooseImage)
             Divider().frame(height: 15).padding(.horizontal, 8)
-            IconButton("无序列表", icon: "list.bullet") { format("bullet") }
-            IconButton("任务清单", icon: "checklist") { format("task") }
-            IconButton("引用", icon: "text.quote") { format("quote") }
+            IconButton(L10n.text("无序列表"), icon: "list.bullet") { format("bullet") }
+            IconButton(L10n.text("任务清单"), icon: "checklist") { format("task") }
+            IconButton(L10n.text("引用"), icon: "text.quote") { format("quote") }
             Menu {
-                Button("插入表格") { format("table") }
-                Button("插入代码块") { format("codeblock") }
-                Button("插入公式") { format("math") }
-                Button("插入 Mermaid 图表") { format("mermaid") }
-                Button("分隔线") { format("divider") }
+                Button(L10n.text("插入表格")) { format("table") }
+                Button(L10n.text("插入代码块")) { format("codeblock") }
+                Button(L10n.text("插入公式")) { format("math") }
+                Button(L10n.text("插入 Mermaid 图表")) { format("mermaid") }
+                Button(L10n.text("分隔线")) { format("divider") }
                 Divider()
-                Button("增加表格行") { format("addRow") }
-                Button("增加表格列") { format("addColumn") }
-                Button("删除当前行") { format("deleteRow") }
-                Button("删除当前列") { format("deleteColumn") }
-                Button("删除表格") { format("deleteTable") }
+                Button(L10n.text("增加表格行")) { format("addRow") }
+                Button(L10n.text("增加表格列")) { format("addColumn") }
+                Button(L10n.text("删除当前行")) { format("deleteRow") }
+                Button(L10n.text("删除当前列")) { format("deleteColumn") }
+                Button(L10n.text("删除表格")) { format("deleteTable") }
             } label: { Image(systemName: "plus.circle").frame(width: 30, height: 30) }
-                .menuStyle(.borderlessButton).fixedSize().help("更多插入与表格操作")
+                .menuStyle(.borderlessButton).fixedSize().help(L10n.text("更多插入与表格操作"))
             Spacer()
-            Text(store.activeDocument?.url == nil ? "本机草稿" : "Markdown")
+            Text(store.activeDocument?.url == nil ? L10n.text("本机草稿") : "Markdown")
                 .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
         }.padding(.horizontal, 21).frame(height: 42)
             .background(Color(hex: preferences.value.theme.surface).opacity(0.38))

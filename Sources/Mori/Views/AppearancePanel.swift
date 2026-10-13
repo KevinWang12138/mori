@@ -1,4 +1,5 @@
 import SwiftUI
+import MoriCore
 
 struct AppearancePanel: View {
     @EnvironmentObject private var preferences: PreferencesStore
@@ -10,23 +11,23 @@ struct AppearancePanel: View {
         VStack(spacing: 0) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("你的写作环境").font(.custom("IowanOldStyle-Roman", size: 23))
-                    Text("一张纸，一束光，还有你喜欢的风景。").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text(L10n.text("你的写作环境")).font(.custom("IowanOldStyle-Roman", size: 23))
+                    Text(L10n.text("一张纸，一束光，还有你喜欢的风景。")).font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Menu {
-                    Button("导入主题…", action: preferences.importTheme)
-                    Button("导出主题…", action: preferences.exportTheme)
+                    Button(L10n.text("导入主题…"), action: preferences.importTheme)
+                    Button(L10n.text("导出主题…"), action: preferences.exportTheme)
                     Divider()
-                    Button("恢复默认外观") { preferences.value = AppearancePreferences() }
+                    Button(L10n.text("恢复默认外观")) { preferences.value = AppearancePreferences() }
                 } label: { Image(systemName: "ellipsis").frame(width: 24) }.menuStyle(.borderlessButton).fixedSize()
-                Button("完成") { dismiss() }.buttonStyle(.borderedProminent)
+                Button(L10n.text("完成")) { dismiss() }.buttonStyle(.borderedProminent)
             }.padding(24)
             Divider().opacity(0.4)
             HStack(spacing: 0) {
                 VStack(spacing: 0) {
-                    Picker("设置类型", selection: $tab) {
-                        Text("外观").tag(0); Text("文字").tag(1); Text("偏好").tag(2)
+                    Picker(L10n.text("设置类型"), selection: $tab) {
+                        Text(L10n.text("外观")).tag(0); Text(L10n.text("文字")).tag(1); Text(L10n.text("偏好")).tag(2)
                     }.pickerStyle(.segmented).padding(20)
                     ScrollView {
                         VStack(alignment: .leading, spacing: 22) {
@@ -48,29 +49,34 @@ struct AppearancePanel: View {
 
     private var typographyControls: some View {
         VStack(alignment: .leading, spacing: 22) {
-            SettingsSection("文章字体") {
-                Picker("字体", selection: $preferences.value.font) { ForEach(WritingFont.allCases) { Text($0.label).tag($0) } }.labelsHidden().frame(maxWidth: .infinity)
-                SettingsSlider("字号", value: $preferences.value.fontSize, range: 13...32, suffix: "px")
-                SettingsSlider("行距", value: $preferences.value.lineHeight, range: 1.3...2.4, decimals: 2)
-                SettingsSlider("纸面宽度", value: $preferences.value.pageWidth, range: 480...1200, suffix: "px")
+            SettingsSection(L10n.text("文章字体")) {
+                Picker(L10n.text("字体"), selection: $preferences.value.font) { ForEach(WritingFont.allCases) { Text($0.label).tag($0) } }.labelsHidden().frame(maxWidth: .infinity)
+                SettingsSlider(L10n.text("字号"), value: $preferences.value.fontSize, range: 13...32, suffix: "px")
+                SettingsSlider(L10n.text("行距"), value: $preferences.value.lineHeight, range: 1.3...2.4, decimals: 2)
+                SettingsSlider(L10n.text("纸面宽度"), value: $preferences.value.pageWidth, range: 480...1200, suffix: "px")
             }
-            SettingsSection("自定义文章 CSS") {
-                Text("可设置文章字体、标题、引用、代码和表格样式。主题会随设置一起导出。").font(.system(size: 10)).foregroundStyle(.secondary)
+            SettingsSection(L10n.text("自定义文章 CSS")) {
+                Text(L10n.text("可设置文章字体、标题、引用、代码和表格样式。主题会随设置一起导出。")).font(.system(size: 10)).foregroundStyle(.secondary)
                 TextEditor(text: $preferences.value.customCSS).font(.system(size: 10, design: .monospaced))
                     .scrollContentBackground(.hidden).frame(height: 180).padding(7)
                     .background(.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 5))
-                Button("填入示例") { preferences.value.customCSS = ".markdown-content h1 { letter-spacing: -0.04em; }\n.markdown-content blockquote { border-left-width: 2px; }" }.font(.system(size: 11))
+                Button(L10n.text("填入示例")) { preferences.value.customCSS = ".markdown-content h1 { letter-spacing: -0.04em; }\n.markdown-content blockquote { border-left-width: 2px; }" }.font(.system(size: 11))
             }
         }
     }
 
     private var writingControls: some View {
-        SettingsSection("写作偏好") {
-            Toggle("自动保存已命名的文章", isOn: $preferences.value.autosave)
-            Toggle("所见即所得模式拼写检查", isOn: $preferences.value.spellcheck)
-            Toggle("源码编辑器显示行号", isOn: $preferences.value.showLineNumbers)
-            HStack { Text("文章写作目标"); Spacer(); TextField("字词", value: $preferences.value.wordGoal, format: .number).frame(width: 90).textFieldStyle(.roundedBorder) }
-            Text("未命名草稿始终保留在本机。历史最多保留每篇文章最近 50 个版本。").font(.system(size: 10)).foregroundStyle(.secondary).padding(.top, 12)
+        SettingsSection(L10n.text("写作偏好")) {
+            Picker(L10n.text("界面语言"), selection: $preferences.language) {
+                ForEach(AppLanguage.allCases) { Text(L10n.label($0)).tag($0) }
+            }
+            Text(L10n.text("切换后立即生效，不会更改文章内容。")).font(.system(size: 10)).foregroundStyle(.secondary)
+            Divider().padding(.vertical, 4)
+            Toggle(L10n.text("自动保存已命名的文章"), isOn: $preferences.value.autosave)
+            Toggle(L10n.text("所见即所得模式拼写检查"), isOn: $preferences.value.spellcheck)
+            Toggle(L10n.text("源码编辑器显示行号"), isOn: $preferences.value.showLineNumbers)
+            HStack { Text(L10n.text("文章写作目标")); Spacer(); TextField(L10n.text("字词"), value: $preferences.value.wordGoal, format: .number).frame(width: 90).textFieldStyle(.roundedBorder) }
+            Text(L10n.text("未命名草稿始终保留在本机。历史最多保留每篇文章最近 50 个版本。")).font(.system(size: 10)).foregroundStyle(.secondary).padding(.top, 12)
         }.font(.system(size: 12))
     }
 }

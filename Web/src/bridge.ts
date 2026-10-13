@@ -1,4 +1,5 @@
 export interface EditorSettings {
+  language: 'en' | 'zh-CN'
   theme: string; surface: string; text: string; muted: string; accent: string;
   font: string; fontSize: number; lineHeight: number; pageWidth: number;
   paperOpacity: number; spellcheck: boolean; showLineNumbers: boolean;

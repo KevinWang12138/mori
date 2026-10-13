@@ -6,7 +6,7 @@ import type { Editor as TiptapEditor } from '@tiptap/core'
 let createEditor: (markdown: string) => TiptapEditor
 before(async () => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https://local.invalid' })
-  for (const key of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'Element', 'MutationObserver', 'DOMParser', 'getComputedStyle']) {
+  for (const key of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'Element', 'MutationObserver', 'DOMParser', 'getComputedStyle', 'CustomEvent']) {
     Object.defineProperty(globalThis, key, { value: Reflect.get(dom.window, key), configurable: true })
   }
   Object.defineProperty(globalThis, 'requestAnimationFrame', { value: (callback: FrameRequestCallback) => setTimeout(callback, 0), configurable: true })
@@ -79,5 +79,26 @@ test('富文本查找跨加粗边界且替换可撤销', async () => {
   assert.equal(editor.state.doc.textContent, '你好. 你好.')
   assert.ok(editor.commands.undo())
   assert.equal(editor.state.doc.textContent, 'Hello world. Hello world.')
+  editor.destroy()
+})
+
+test('所见即所得语言切换保留文章、选区与撤销，代码工具即时翻译', async () => {
+  const { setEditorLanguage } = await import('../src/i18n')
+  setEditorLanguage('en')
+  const editor = createEditor('# 中文标题\n\nKeep my words.\n\n```swift\nlet title = "你好"\n```')
+  document.body.append(editor.view.dom)
+  editor.commands.setTextSelection(2)
+  editor.commands.insertContent('Edited ')
+  const markdown = editor.getMarkdown(); const selection = editor.state.selection.toJSON()
+  const input = editor.view.dom.querySelector<HTMLInputElement>('.code-toolbar input')!
+  assert.equal(input.placeholder, 'Code language')
+  setEditorLanguage('zh-CN')
+  editor.view.dispatch(editor.state.tr.setMeta('mori-language-change', true))
+  assert.equal(input.placeholder, '代码语言'); assert.equal(editor.getMarkdown(), markdown)
+  assert.deepEqual(editor.state.selection.toJSON(), selection)
+  setEditorLanguage('en')
+  editor.view.dispatch(editor.state.tr.setMeta('mori-language-change', true))
+  assert.equal(input.placeholder, 'Code language'); assert.equal(input.value, 'swift')
+  assert.ok(editor.commands.undo()); assert.ok(editor.getMarkdown().startsWith('# 中文标题'))
   editor.destroy()
 })

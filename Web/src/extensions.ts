@@ -8,6 +8,7 @@ import katex from 'katex'
 import { assetURL, headingID } from './document'
 import { editFields } from './dialogs'
 import { renderDiagram } from './renderer'
+import { localize } from './i18n'
 
 let getDirectory = () => ''
 export function configureAssetDirectory(getter: () => string): void { getDirectory = getter }
@@ -40,8 +41,8 @@ export const CodeBlock = CodeBlockLowlight.extend({
       const wrapper = document.createElement('div'); wrapper.className = 'code-block'
       const toolbar = document.createElement('div'); toolbar.className = 'code-toolbar'; toolbar.contentEditable = 'false'
       const language = document.createElement('input'); language.value = String(node.attrs.language ?? '')
-      language.placeholder = '代码语言'; language.setAttribute('aria-label', '代码语言'); language.spellcheck = false
-      const hint = document.createElement('span'); hint.textContent = '⌘↩ 继续写作'
+      localize(language, { placeholder: '代码语言', aria: '代码语言' }); language.spellcheck = false
+      const hint = document.createElement('span'); localize(hint, { text: '⌘↩ 继续写作' })
       toolbar.append(language, hint)
       const pre = document.createElement('pre'); const code = document.createElement('code'); pre.append(code)
       const diagram = document.createElement('div'); diagram.className = 'diagram-live'; diagram.contentEditable = 'false'

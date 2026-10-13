@@ -21,24 +21,24 @@ struct BlogMetadataPanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 17) {
-                Text("文章元信息").font(.system(size: 9, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
-                field("标题", text: $title)
+                Text(L10n.text("文章元信息")).font(.system(size: 9, weight: .semibold)).tracking(1).foregroundStyle(.secondary)
+                field(L10n.text("标题"), text: $title)
                 VStack(alignment: .leading, spacing: 7) {
-                    Text("摘要").font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(L10n.text("摘要")).font(.system(size: 10)).foregroundStyle(.secondary)
                     TextEditor(text: $description).font(.system(size: 11)).scrollContentBackground(.hidden).frame(height: 72).padding(5)
                         .background(.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 4))
-                    Text("\(description.count) 字符").font(.system(size: 9)).foregroundStyle(.tertiary)
+                    Text(L10n.format("%d 字符", description.count)).font(.system(size: 9)).foregroundStyle(.tertiary)
                 }
-                field("发布日期", text: $date)
-                field("URL 标识 / slug", text: $slug)
-                field("标签 · 用逗号分隔", text: $tags)
-                field("分类 · 用逗号分隔", text: $categories)
-                field("封面路径或 HTTPS 地址", text: $cover)
-                Toggle("标记为草稿", isOn: $draft).font(.system(size: 11))
-                Button("应用到 Front Matter", action: applyMetadata).buttonStyle(.borderedProminent).controlSize(.small).frame(maxWidth: .infinity)
-                Text("未列出的 YAML 字段会保留。复杂元信息可在源码模式中直接编辑。").font(.system(size: 10)).foregroundStyle(.secondary).lineSpacing(4)
+                field(L10n.text("发布日期"), text: $date)
+                field(L10n.text("URL 标识 / slug"), text: $slug)
+                field(L10n.text("标签 · 用逗号分隔"), text: $tags)
+                field(L10n.text("分类 · 用逗号分隔"), text: $categories)
+                field(L10n.text("封面路径或 HTTPS 地址"), text: $cover)
+                Toggle(L10n.text("标记为草稿"), isOn: $draft).font(.system(size: 11))
+                Button(L10n.text("应用到 Front Matter"), action: applyMetadata).buttonStyle(.borderedProminent).controlSize(.small).frame(maxWidth: .infinity)
+                Text(L10n.text("未列出的 YAML 字段会保留。复杂元信息可在源码模式中直接编辑。")).font(.system(size: 10)).foregroundStyle(.secondary).lineSpacing(4)
                 Divider().padding(.vertical, 4)
-                Button("在 Finder 中显示文章", action: store.revealCurrentFile).font(.system(size: 10)).disabled(store.activeDocument?.url == nil)
+                Button(L10n.text("在 Finder 中显示文章"), action: store.revealCurrentFile).font(.system(size: 10)).disabled(store.activeDocument?.url == nil)
             }.padding(.horizontal, 22).padding(.bottom, 24)
         }
         .onAppear(perform: loadMetadata)

@@ -2,10 +2,14 @@
 <p align="center"><img src="assets/AppIcon.png" width="110" alt="Mori 图标"></p>
 <h1 align="center">Mori</h1>
 <p align="center">给博客写作，留一片安静的地方。</p>
-<p align="center">原生 macOS · Markdown · 离线写作 · MIT 开源</p>
+<p align="center">原生 macOS · Markdown · 中英切换 · 离线写作 · MIT 开源</p>
 <p align="center"><a href="https://github.com/KevinWang12138/mori/releases/latest">下载 Mac 应用</a> · <a href="docs/USER_GUIDE.md">使用说明</a> · <a href="https://github.com/KevinWang12138/mori/issues">反馈问题</a></p>
 
 Mori 是为博客写作者设计的原生 Mac Markdown 编辑器。默认直接在文章中编辑，输入 Markdown 标记后转换为标题、列表和引用；也可以切到源码或分栏预览。设计参考 Typora 的直接写作体验，采用独立实现、独立视觉和独立品牌。
+
+![Mori 真实写作界面：文章库、所见即所得编辑、大纲和森林背景](docs/screenshots/writing-en.jpg)
+
+*真实 macOS 应用截图，使用公开示例文章，展示直接写作、文章库、大纲和可自定义背景。*
 
 ## 写作
 
@@ -42,6 +46,16 @@ Mori 是为博客写作者设计的原生 Mac Markdown 编辑器。默认直接�
 
 自选背景会拷贝到应用资料目录，移动原图不会使背景消失。导出主题不打包私人背景图片，可自行分享图片并在另一台 Mac 导入。
 
+![Mori 背景设置：主题、图片铺放、位置、透明度与即时预览](docs/screenshots/appearance-en.jpg)
+
+## 界面语言
+
+在 **Mori → 语言** 中直接切换，或打开 **写作环境（⌘,）→ 偏好 → 界面语言**，选择 **跟随系统**、**English** 或 **简体中文**。默认跟随系统首选语言，暂未支持的语言使用英文。
+
+选择会自动记住，界面、编辑器工具和提示立即切换。文章原文、Front Matter、光标、撤销历史和原有外观设置都会保留。语言偏好与主题文件独立，导入主题不会改变界面语言。
+
+![Mori 中文偏好设置与界面语言切换入口](docs/screenshots/language-zh-CN.jpg)
+
 ## 下载与安装
 
 需要 **macOS 14 或更新版本**。发布包是 Apple Silicon 与 Intel 通用应用。
@@ -52,7 +66,7 @@ Mori 是为博客写作者设计的原生 Mac Markdown 编辑器。默认直接�
 
 ### macOS 首次打开
 
-0.1.0 使用 ad-hoc 签名，尚未使用 Apple Developer ID 公证。首次启动出现“Mori 未打开”提示时：
+0.1.1 使用 ad-hoc 签名，尚未使用 Apple Developer ID 公证。首次启动出现“Mori 未打开”提示时：
 
 1. 点击「完成」，保留已安装的应用。
 2. 打开「系统设置 → 隐私与安全性」。
@@ -106,7 +120,7 @@ scripts/          检查、应用构建和精确 SHA 发布
 - 所见即所得查找支持跨内联格式匹配、前后导航、大小写、逐处和全部替换；源码模式另提供正则和整词匹配。
 - 没有云账户、发布到博客平台的 API 或内置同步。可以把 Markdown 文件夹放到自己的 Git、iCloud 或其他同步目录。
 - 读取文章中明确引用的 HTTPS 图片时会请求对应图片地址；链接只在用户点击时交给系统浏览器。应用不发送遥测、不上传文章。
-- 当前应用界面为中文，仓库 README 支持中英文切换。
+- 应用支持英文与简体中文；macOS 系统对话框跟随系统语言。仓库 README 支持中英文切换。
 
 ## 开源
 

@@ -17,12 +17,14 @@ struct MoriApp: App {
         Window("Mori", id: "workspace") {
             WorkspaceView()
                 .environmentObject(documents).environmentObject(preferences)
+                .environment(\.locale, L10n.locale)
+                .onChange(of: preferences.language) { _, _ in documents.objectWillChange.send() }
                 .onAppear { appDelegate.connect(documents) }
                 .onDisappear { documents.flushRecovery() }
                 .onOpenURL { documents.open($0) }
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1360, height: 870)
-        .commands { MoriCommands(store: documents) }
+        .commands { MoriCommands(store: documents, preferences: preferences) }
     }
 }

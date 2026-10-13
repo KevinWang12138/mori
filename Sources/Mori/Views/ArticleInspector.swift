@@ -5,10 +5,10 @@ struct ArticleInspector: View {
     @EnvironmentObject private var preferences: PreferencesStore
     var body: some View {
         VStack(spacing: 0) {
-            Picker("文章信息", selection: $store.inspector) { ForEach(InspectorPanel.allCases) { Text($0.label).tag($0) } }
+            Picker(L10n.text("文章信息"), selection: $store.inspector) { ForEach(InspectorPanel.allCases) { Text($0.label).tag($0) } }
                 .pickerStyle(.segmented).padding(.horizontal, 16).padding(.top, 20).padding(.bottom, 18)
             if store.activeDocument == nil {
-                Text("打开一篇文章后查看详细信息。").font(.system(size: 11)).foregroundStyle(.secondary).padding(24)
+                Text(L10n.text("打开一篇文章后查看详细信息。")).font(.system(size: 11)).foregroundStyle(.secondary).padding(24)
                 Spacer()
             } else {
                 switch store.inspector {
@@ -26,9 +26,9 @@ private struct OutlinePanel: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 3) {
-                Text("文章大纲").font(.system(size: 9, weight: .semibold)).tracking(1).foregroundStyle(.secondary).padding(.bottom, 12)
+                Text(L10n.text("文章大纲")).font(.system(size: 9, weight: .semibold)).tracking(1).foregroundStyle(.secondary).padding(.bottom, 12)
                 if store.headings.isEmpty {
-                    Text("输入 # 加空格开始写标题。标题会出现在这里。").font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
+                    Text(L10n.text("输入 # 加空格开始写标题。标题会出现在这里。")).font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                 }
                 ForEach(Array(store.headings.enumerated()), id: \.element.id) { index, heading in
                     Button { store.editor.perform("jump", payload: ["index": index, "line": heading.line]) } label: {

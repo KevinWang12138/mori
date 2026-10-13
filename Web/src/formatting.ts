@@ -4,6 +4,7 @@ import { openSearchPanel } from '@codemirror/search'
 import { undo, redo } from '@codemirror/commands'
 import { safeLink } from './document'
 import { editFields } from './dialogs'
+import { t } from './i18n'
 
 export function formatRich(editor: Editor, name: string, payload: Record<string, unknown>): void {
   const chain = editor.chain().focus()
@@ -22,7 +23,7 @@ export function formatRich(editor: Editor, name: string, payload: Record<string,
     case 'quote': chain.toggleBlockquote().run(); break
     case 'divider': chain.setHorizontalRule().run(); break
     case 'codeblock': chain.toggleCodeBlock({ language: 'text' }).run(); break
-    case 'mermaid': chain.insertContent({ type: 'codeBlock', attrs: { language: 'mermaid' }, content: [{ type: 'text', text: 'flowchart LR\n  想法 --> 写作 --> 发布' }] }).run(); break
+    case 'mermaid': chain.insertContent({ type: 'codeBlock', attrs: { language: 'mermaid' }, content: [{ type: 'text', text: t('flowchart LR\n  想法 --> 写作 --> 发布') }] }).run(); break
     case 'math': chain.insertContent({ type: 'blockMath', attrs: { latex: 'E = mc^2' } }).run(); break
     case 'table': chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); break
     case 'addRow': chain.addRowAfter().run(); break
@@ -57,12 +58,12 @@ export function formatSource(view: EditorView, name: string, payload: Record<str
   let to = range.to
   let cursor = range.from
   if (wraps[name]) {
-    const [before, after] = wraps[name]; insert = before + (text || '文字') + after; cursor = from + before.length
+    const [before, after] = wraps[name]; insert = before + (text || t('文本')) + after; cursor = from + before.length
   } else {
     const blocks: Record<string, string> = {
-      table: '\n| 标题 | 标题 |\n| --- | --- |\n| 内容 | 内容 |\n',
-      codeblock: '\n```text\n' + (text || '代码') + '\n```\n',
-      mermaid: '\n```mermaid\nflowchart LR\n  想法 --> 写作 --> 发布\n```\n',
+      table: t('\n| 标题 | 标题 |\n| --- | --- |\n| 内容 | 内容 |\n'),
+      codeblock: '\n```text\n' + (text || t('代码')) + '\n```\n',
+      mermaid: t('\n```mermaid\nflowchart LR\n  想法 --> 写作 --> 发布\n```\n'),
       math: '\n$$\nE = mc^2\n$$\n', divider: '\n\n---\n\n',
       insertImage: `![${String(payload.alt ?? '')}](${String(payload.src ?? '').replaceAll(' ', '%20')})`,
       insertText: String(payload.text ?? '')

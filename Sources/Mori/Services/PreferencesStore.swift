@@ -1,15 +1,18 @@
 import AppKit
 import Combine
 import UniformTypeIdentifiers
+import MoriCore
 
 @MainActor
 final class PreferencesStore: ObservableObject {
     @Published var value: AppearancePreferences { didSet { persist() } }
+    @Published var language: AppLanguage { didSet { language.save(to: defaults) } }
     @Published var errorMessage: String?
     private let defaults: UserDefaults
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        language = AppLanguage.load(from: defaults)
         if let data = defaults.data(forKey: "appearance"), let decoded = try? JSONDecoder().decode(AppearancePreferences.self, from: data) {
             var preferences = decoded; preferences.normalize(); value = preferences
         } else { value = AppearancePreferences() }
@@ -23,7 +26,7 @@ final class PreferencesStore: ObservableObject {
     func chooseWallpaper() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.png, .jpeg, .heic, .tiff, .webP]
-        panel.prompt = "设为背景"; panel.canChooseDirectories = false
+        panel.prompt = L10n.text("设为背景"); panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let source = panel.url else { return }
         do {
             guard let image = NSImage(contentsOf: source), image.size.width > 0 else { throw CocoaError(.fileReadCorruptFile) }
@@ -33,18 +36,18 @@ final class PreferencesStore: ObservableObject {
             let oldPath = value.customWallpaperPath
             value.customWallpaperPath = destination.path; value.wallpaper = .custom
             if let oldPath, oldPath.hasPrefix(AppPaths.backgrounds.path + "/") { try? FileManager.default.removeItem(atPath: oldPath) }
-        } catch { errorMessage = "背景图片没有导入成功。请换一张图片或检查文件权限。" }
+        } catch { errorMessage = L10n.text("背景图片没有导入成功。请换一张图片或检查文件权限。") }
     }
 
     func exportTheme() {
-        let panel = NSSavePanel(); panel.allowedContentTypes = [.json]; panel.nameFieldStringValue = "Mori-写作主题.json"
+        let panel = NSSavePanel(); panel.allowedContentTypes = [.json]; panel.nameFieldStringValue = L10n.text("Mori-写作主题.json")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             var portable = value; portable.customWallpaperPath = nil
             if portable.wallpaper == .custom { portable.wallpaper = .none }
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             try encoder.encode(portable).write(to: url, options: .atomic)
-        } catch { errorMessage = "主题没有导出成功。请检查目标文件夹的权限。" }
+        } catch { errorMessage = L10n.text("主题没有导出成功。请检查目标文件夹的权限。") }
     }
 
     func importTheme() {
@@ -57,7 +60,7 @@ final class PreferencesStore: ObservableObject {
             imported.normalize(); imported.customWallpaperPath = value.customWallpaperPath
             if imported.wallpaper == .custom && imported.customWallpaperPath == nil { imported.wallpaper = .none }
             value = imported
-        } catch { errorMessage = "无法读取这个主题。请使用 Mori 导出的主题文件。" }
+        } catch { errorMessage = L10n.text("无法读取这个主题。请使用 Mori 导出的主题文件。") }
     }
 
     private func persist() {

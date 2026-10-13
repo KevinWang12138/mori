@@ -2,10 +2,14 @@
 <p align="center"><img src="assets/AppIcon.png" width="110" alt="Mori icon"></p>
 <h1 align="center">Mori</h1>
 <p align="center">A quiet place to write your next blog post.</p>
-<p align="center">Native macOS · Markdown · Offline writing · MIT licensed</p>
+<p align="center">Native macOS · Markdown · English / 简体中文 · Offline writing · MIT licensed</p>
 <p align="center"><a href="https://github.com/KevinWang12138/mori/releases/latest">Download for Mac</a> · <a href="docs/USER_GUIDE.md">User guide (中文)</a> · <a href="https://github.com/KevinWang12138/mori/issues">Report an issue</a></p>
 
 Mori is a native Mac Markdown editor built for blog writers. Write directly in your document: Markdown shortcuts turn into headings, lists, and quotes as you type. Switch to source editing or a split preview whenever you need it. Inspired by Typora's direct editing experience, Mori has its own implementation, visual design, and identity.
+
+![Mori live Markdown editor with the article library, outline, and forest wallpaper](docs/screenshots/writing-en.jpg)
+
+*Live editing with your article library, outline, and a writing space you can make your own. Screenshots show the actual macOS app with public example articles.*
 
 ## Writing
 
@@ -28,7 +32,7 @@ Mori is a native Mac Markdown editor built for blog writers. Write directly in y
 
 ## Make your writing space your own
 
-Choose from three base themes: Warm Paper, Moss, and Ink Night. Use the built-in forest wallpaper or bring your own photos and textures.
+Choose from three base themes: Paper, Sage, and Night. Use the built-in forest wallpaper or bring your own photos and textures.
 
 | Setting | Controls |
 | --- | --- |
@@ -42,6 +46,16 @@ Choose from three base themes: Warm Paper, Moss, and Ink Night. Use the built-in
 
 Custom backgrounds are copied into Mori's application data folder, so moving the original photo will not remove your background. Exported themes contain settings and CSS; private background images stay on your Mac. Share an image separately and import it on another Mac when needed.
 
+![Mori background controls with theme choices, image placement, opacity, and a live preview](docs/screenshots/appearance-en.jpg)
+
+## Language
+
+Choose **Mori → Language**, or open **Writing Environment (⌘,) → Preferences → Interface language**. Select **Follow System**, **English**, or **简体中文**. The default follows your primary system language and uses English for unsupported languages.
+
+Your choice is remembered and applies immediately to the interface, editor tools, and prompts. Articles, Front Matter, cursor positions, undo history, and appearance settings are preserved. Language preferences stay separate from imported and exported themes.
+
+![Mori preferences in Simplified Chinese with the interface language selector](docs/screenshots/language-zh-CN.jpg)
+
 ## Download and install
 
 Requires **macOS 14 or later**. Releases include a universal app for Apple Silicon and Intel Macs.
@@ -52,7 +66,7 @@ Requires **macOS 14 or later**. Releases include a universal app for Apple Silic
 
 ### First launch on macOS
 
-Version 0.1.0 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
+Version 0.1.1 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
 
 1. Select **Done** to keep the app installed.
 2. Open **System Settings → Privacy & Security**.
@@ -106,7 +120,7 @@ scripts/          Checks, app packaging, and releases from an exact commit SHA
 - Live editing supports search across inline formatting, previous/next matches, case sensitivity, and individual or bulk replacement. Source mode also supports regular expressions and whole-word matching.
 - There are no cloud accounts, blog publishing APIs, or built-in sync. Keep your Markdown folder in your own Git, iCloud, or other sync directory.
 - HTTPS images explicitly referenced in an article are requested from their source. Links open in the system browser when you click them. Mori sends no telemetry and does not upload your writing.
-- The current app interface is in Chinese. This repository provides English and Chinese READMEs.
+- Mori supports English and Simplified Chinese interfaces. macOS system dialogs follow your macOS language. This repository provides English and Chinese READMEs.
 
 ## Open source
 

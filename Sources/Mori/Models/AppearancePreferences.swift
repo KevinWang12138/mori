@@ -3,7 +3,7 @@ import SwiftUI
 enum WritingTheme: String, Codable, CaseIterable, Identifiable {
     case paper, sage, night
     var id: String { rawValue }
-    var label: String { switch self { case .paper: return "暖纸"; case .sage: return "青苔"; case .night: return "墨夜" } }
+    var label: String { switch self { case .paper: return L10n.text("暖纸"); case .sage: return L10n.text("青苔"); case .night: return L10n.text("墨夜") } }
     var background: String { switch self { case .paper: return "#F1EFE9"; case .sage: return "#E5EBE4"; case .night: return "#161D1B" } }
     var surface: String { switch self { case .paper: return "#FFFEFA"; case .sage: return "#F7FAF5"; case .night: return "#202925" } }
     var text: String { self == .night ? "#E2E9E2" : "#28362E" }
@@ -15,19 +15,19 @@ enum WritingTheme: String, Codable, CaseIterable, Identifiable {
 enum WallpaperKind: String, Codable, CaseIterable, Identifiable {
     case none, forest, custom
     var id: String { rawValue }
-    var label: String { switch self { case .none: return "纯色"; case .forest: return "林间晨雾"; case .custom: return "自选图片" } }
+    var label: String { switch self { case .none: return L10n.text("纯色"); case .forest: return L10n.text("林间晨雾"); case .custom: return L10n.text("自选图片") } }
 }
 
 enum WallpaperFit: String, Codable, CaseIterable, Identifiable {
     case cover, contain, tile
     var id: String { rawValue }
-    var label: String { switch self { case .cover: return "铺满"; case .contain: return "完整显示"; case .tile: return "平铺" } }
+    var label: String { switch self { case .cover: return L10n.text("铺满"); case .contain: return L10n.text("完整显示"); case .tile: return L10n.text("平铺") } }
 }
 
 enum WritingFont: String, Codable, CaseIterable, Identifiable {
     case editorial, system, song
     var id: String { rawValue }
-    var label: String { switch self { case .editorial: return "书卷衬线"; case .system: return "简洁无衬线"; case .song: return "中文宋体" } }
+    var label: String { switch self { case .editorial: return L10n.text("书卷衬线"); case .system: return L10n.text("简洁无衬线"); case .song: return L10n.text("中文宋体") } }
     var css: String {
         switch self {
         case .editorial: return "'Iowan Old Style', 'Palatino', 'Songti SC', serif"

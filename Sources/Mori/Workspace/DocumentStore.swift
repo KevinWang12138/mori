@@ -74,11 +74,11 @@ final class DocumentStore: ObservableObject {
         }
     }
 
-    func newDocument(template: BlogTemplate = .blank, title: String = "未命名文章") {
+    func newDocument(template: BlogTemplate = .blank, title: String = L10n.text("未命名文章")) {
         let date = ISO8601DateFormatter().string(from: Date()).prefix(10)
         let content = FrontMatter.template(style: template, title: title, date: String(date))
         let document = WritingDocument(recovery: RecoverableDocument(content: content))
-        documents.append(document); activate(document.id); notice = "草稿会自动保留在本机。"
+        documents.append(document); activate(document.id); notice = L10n.text("草稿会自动保留在本机。")
     }
 
     func newWelcome() {
@@ -89,7 +89,7 @@ final class DocumentStore: ObservableObject {
     func refreshWorkspace() {
         guard let workspaceURL else { return }
         do { articles = try WorkspaceScanner.scan(workspaceURL); indexSearchContent() }
-        catch { errorMessage = "文章文件夹暂时无法读取。请重新选择文件夹。" }
+        catch { errorMessage = L10n.text("文章文件夹暂时无法读取。请重新选择文件夹。") }
     }
 
     func indexSearchContent() {
@@ -114,15 +114,15 @@ final class DocumentStore: ObservableObject {
     func loadRevisions() {
         guard let document = activeDocument else { revisions = []; return }
         do { revisions = try recovery.revisions(for: document.revisionKey) }
-        catch { revisions = []; errorMessage = "历史版本暂时无法读取，当前文章不受影响。" }
+        catch { revisions = []; errorMessage = L10n.text("历史版本暂时无法读取，当前文章不受影响。") }
     }
 
     func restoreRevision(_ revision: DocumentRevision) {
         guard let document = activeDocument else { return }
         do { try recovery.addRevision(document.content, for: document.revisionKey) }
-        catch { errorMessage = "无法备份当前稿件，已停止恢复历史版本。"; return }
+        catch { errorMessage = L10n.text("无法备份当前稿件，已停止恢复历史版本。"); return }
         update(id: document.id, content: revision.content); loadRevisions()
-        editor.resetDocument(); notice = "已恢复历史稿件，恢复前的内容也已保留。"
+        editor.resetDocument(); notice = L10n.text("已恢复历史稿件，恢复前的内容也已保留。")
     }
 
     func revealCurrentFile() {
@@ -144,8 +144,8 @@ final class DocumentStore: ObservableObject {
         case .action(let name):
             if name == "focus" { focusMode.toggle() }
             else if name == "typewriter" { typewriterMode.toggle() }
-        case .unsupported: mode = .source; notice = "这篇文章含扩展语法，已使用源码模式保留完整内容。"
-        case .error: errorMessage = "编辑器暂时无法处理这项操作。你的稿件已保留，请切到源码模式继续。"
+        case .unsupported: mode = .source; notice = L10n.text("这篇文章含扩展语法，已使用源码模式保留完整内容。")
+        case .error: errorMessage = L10n.text("编辑器暂时无法处理这项操作。你的稿件已保留，请切到源码模式继续。")
         }
     }
 }

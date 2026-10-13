@@ -21,8 +21,8 @@ extension DocumentStore {
             refreshWorkspace(); loadRevisions()
         } catch {
             do { try recovery.quarantine() }
-            catch { recoveryBlocked = true; errorMessage = "恢复档案暂时无法读取，也无法备份。请检查 Mori 资料目录的权限。"; return }
-            errorMessage = "上一份恢复档案未能读取，原档案已单独保留在 Mori 资料目录。"
+            catch { recoveryBlocked = true; errorMessage = L10n.text("恢复档案暂时无法读取，也无法备份。请检查 Mori 资料目录的权限。"); return }
+            errorMessage = L10n.text("上一份恢复档案未能读取，原档案已单独保留在 Mori 资料目录。")
         }
     }
 
@@ -42,7 +42,7 @@ extension DocumentStore {
         do {
             try recovery.save(RecoverySession(documents: documents.map(\.recovery), activeID: activeID, workspacePath: workspaceURL?.path))
             return true
-        } catch { errorMessage = "草稿恢复档案没有写入成功。请先将文章保存到文件，并检查磁盘可用空间。"; return false }
+        } catch { errorMessage = L10n.text("草稿恢复档案没有写入成功。请先将文章保存到文件，并检查磁盘可用空间。"); return false }
     }
 
     func prepareToQuit(completion: @escaping (Bool) -> Void) {

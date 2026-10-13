@@ -1,6 +1,7 @@
 import type { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { localize } from './i18n'
 
 export interface InsertItem { name: string; label: string; symbol: string }
 export const insertItems: InsertItem[] = [
@@ -33,17 +34,19 @@ export function findMatches(doc: ProseMirrorNode, query: string, caseSensitive =
 export function findInRich(editor: Editor): void {
   const existing = document.querySelector<HTMLElement>('.find-panel')
   if (existing) { existing.querySelector<HTMLInputElement>('input')?.focus(); return }
-  const panel = document.createElement('section'); panel.className = 'find-panel'; panel.setAttribute('aria-label', '查找与替换')
-  const search = document.createElement('input'); search.placeholder = '查找内容'; search.setAttribute('aria-label', '查找内容')
-  const replace = document.createElement('input'); replace.placeholder = '替换为'; replace.setAttribute('aria-label', '替换为')
+  const panel = document.createElement('section'); panel.className = 'find-panel'; localize(panel, { aria: '查找与替换' })
+  const search = document.createElement('input'); localize(search, { placeholder: '查找内容', aria: '查找内容' })
+  const replace = document.createElement('input'); localize(replace, { placeholder: '替换为', aria: '替换为' })
   const count = document.createElement('span'); count.className = 'find-count'
   const sensitive = document.createElement('input'); sensitive.type = 'checkbox'
-  const sensitiveLabel = document.createElement('label'); sensitiveLabel.append(sensitive, '区分大小写')
+  const sensitiveLabel = document.createElement('label'); const caption = document.createElement('span'); localize(caption, { text: '区分大小写' }); sensitiveLabel.append(sensitive, caption)
   let matches: SearchMatch[] = []; let index = -1
   const refresh = () => {
     matches = findMatches(editor.state.doc, search.value, sensitive.checked)
     if (index >= matches.length) index = matches.length - 1
-    count.textContent = search.value ? (matches.length ? `${Math.max(0, index + 1)} / ${matches.length}` : '没有匹配') : ''
+    count.removeAttribute('data-i18n-text')
+    count.textContent = search.value && matches.length ? `${Math.max(0, index + 1)} / ${matches.length}` : ''
+    if (search.value && !matches.length) localize(count, { text: '没有匹配' })
   }
   const jump = (direction: number) => {
     refresh(); if (!matches.length) return
@@ -53,7 +56,7 @@ export function findInRich(editor: Editor): void {
     count.textContent = `${index + 1} / ${matches.length}`
   }
   const button = (label: string, action: () => void) => {
-    const result = document.createElement('button'); result.textContent = label; result.type = 'button'; result.onclick = action; return result
+    const result = document.createElement('button'); localize(result, { text: label }); result.type = 'button'; result.onclick = action; return result
   }
   const first = document.createElement('div'); first.append(search, count, button('↑', () => jump(-1)), button('↓', () => jump(1)), button('关闭', () => { panel.remove(); editor.commands.focus() }))
   const second = document.createElement('div'); second.append(replace,

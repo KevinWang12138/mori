@@ -4,7 +4,7 @@ struct BackgroundControls: View {
     @EnvironmentObject private var preferences: PreferencesStore
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
-            SettingsSection("纸与墨") {
+            SettingsSection(L10n.text("纸与墨")) {
                 HStack(spacing: 10) {
                     ForEach(WritingTheme.allCases) { theme in
                         Button { preferences.selectTheme(theme) } label: {
@@ -19,29 +19,29 @@ struct BackgroundControls: View {
                     }
                 }
             }
-            SettingsSection("背景图片") {
-                Picker("背景", selection: $preferences.value.wallpaper) { ForEach(WallpaperKind.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented).labelsHidden()
+            SettingsSection(L10n.text("背景图片")) {
+                Picker(L10n.text("背景"), selection: $preferences.value.wallpaper) { ForEach(WallpaperKind.allCases) { Text($0.label).tag($0) } }.pickerStyle(.segmented).labelsHidden()
                 Button(action: preferences.chooseWallpaper) {
-                    Label(preferences.value.customWallpaperPath == nil ? "选择自己的图片…" : "更换自己的图片…", systemImage: "photo.on.rectangle").font(.system(size: 11))
+                    Label(preferences.value.customWallpaperPath == nil ? L10n.text("选择自己的图片…") : L10n.text("更换自己的图片…"), systemImage: "photo.on.rectangle").font(.system(size: 11))
                 }.buttonStyle(.bordered).frame(maxWidth: .infinity)
                 if preferences.value.wallpaper != .none {
-                    Picker("铺放方式", selection: $preferences.value.fit) { ForEach(WallpaperFit.allCases) { Text($0.label).tag($0) } }.font(.system(size: 11))
-                    SettingsSlider("缩放", value: $preferences.value.scale, range: 0.5...3, suffix: "×", decimals: 2)
-                    SettingsSlider("水平位置", value: $preferences.value.positionX, range: 0...1, decimals: 2)
-                    SettingsSlider("垂直位置", value: $preferences.value.positionY, range: 0...1, decimals: 2)
-                    SettingsSlider("图片不透明度", value: $preferences.value.wallpaperOpacity, range: 0...1, decimals: 2)
-                    SettingsSlider("背景模糊", value: $preferences.value.blur, range: 0...40, suffix: "px")
-                    SettingsSlider("色彩饱和度", value: $preferences.value.saturation, range: 0...2, decimals: 2)
+                    Picker(L10n.text("铺放方式"), selection: $preferences.value.fit) { ForEach(WallpaperFit.allCases) { Text($0.label).tag($0) } }.font(.system(size: 11))
+                    SettingsSlider(L10n.text("缩放"), value: $preferences.value.scale, range: 0.5...3, suffix: "×", decimals: 2)
+                    SettingsSlider(L10n.text("水平位置"), value: $preferences.value.positionX, range: 0...1, decimals: 2)
+                    SettingsSlider(L10n.text("垂直位置"), value: $preferences.value.positionY, range: 0...1, decimals: 2)
+                    SettingsSlider(L10n.text("图片不透明度"), value: $preferences.value.wallpaperOpacity, range: 0...1, decimals: 2)
+                    SettingsSlider(L10n.text("背景模糊"), value: $preferences.value.blur, range: 0...40, suffix: "px")
+                    SettingsSlider(L10n.text("色彩饱和度"), value: $preferences.value.saturation, range: 0...2, decimals: 2)
                 }
             }
-            SettingsSection("底色与遮罩") {
-                ColorPicker("背景底色", selection: colorBinding(\.backgroundColor), supportsOpacity: false).font(.system(size: 11))
-                ColorPicker("遮罩颜色", selection: colorBinding(\.overlayColor), supportsOpacity: false).font(.system(size: 11))
-                SettingsSlider("遮罩浓度", value: $preferences.value.overlayOpacity, range: 0...1, decimals: 2)
+            SettingsSection(L10n.text("底色与遮罩")) {
+                ColorPicker(L10n.text("背景底色"), selection: colorBinding(\.backgroundColor), supportsOpacity: false).font(.system(size: 11))
+                ColorPicker(L10n.text("遮罩颜色"), selection: colorBinding(\.overlayColor), supportsOpacity: false).font(.system(size: 11))
+                SettingsSlider(L10n.text("遮罩浓度"), value: $preferences.value.overlayOpacity, range: 0...1, decimals: 2)
             }
-            SettingsSection("纸面与侧栏") {
-                SettingsSlider("纸面不透明度", value: $preferences.value.paperOpacity, range: 0.25...1, decimals: 2)
-                SettingsSlider("侧栏不透明度", value: $preferences.value.sidebarOpacity, range: 0.35...1, decimals: 2)
+            SettingsSection(L10n.text("纸面与侧栏")) {
+                SettingsSlider(L10n.text("纸面不透明度"), value: $preferences.value.paperOpacity, range: 0.25...1, decimals: 2)
+                SettingsSlider(L10n.text("侧栏不透明度"), value: $preferences.value.sidebarOpacity, range: 0.35...1, decimals: 2)
             }
         }
     }

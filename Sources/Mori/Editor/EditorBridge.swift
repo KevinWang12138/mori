@@ -7,6 +7,7 @@ enum EditorMessage {
 }
 
 private struct WebEditorSettings: Encodable {
+    var language: String
     var theme: String
     var surface: String
     var text: String
@@ -64,7 +65,7 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
         if let workspaceURL, let url = document.url, url.path.hasPrefix(workspaceURL.path + "/") { roots.append(workspaceURL) }
         assets.roots = roots
         let theme = preferences.theme
-        let settings = WebEditorSettings(theme: theme.rawValue, surface: theme.surface, text: theme.text, muted: theme.muted,
+        let settings = WebEditorSettings(language: L10n.language.rawValue, theme: theme.rawValue, surface: theme.surface, text: theme.text, muted: theme.muted,
             accent: theme.accent, font: preferences.font.css, fontSize: preferences.fontSize, lineHeight: preferences.lineHeight,
             pageWidth: preferences.pageWidth, paperOpacity: preferences.paperOpacity, spellcheck: preferences.spellcheck,
             showLineNumbers: preferences.showLineNumbers, focusMode: focus, typewriterMode: typewriter, customCSS: preferences.customCSS)
