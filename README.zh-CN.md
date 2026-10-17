@@ -66,7 +66,7 @@ Mori 是为博客写作者设计的原生 Mac Markdown 编辑器。默认直接�
 
 ### macOS 首次打开
 
-0.1.2 使用 ad-hoc 签名，尚未使用 Apple Developer ID 公证。首次启动出现“Mori 未打开”提示时：
+0.1.3 使用 ad-hoc 签名，尚未使用 Apple Developer ID 公证。首次启动出现“Mori 未打开”提示时：
 
 1. 点击「完成」，保留已安装的应用。
 2. 打开「系统设置 → 隐私与安全性」。

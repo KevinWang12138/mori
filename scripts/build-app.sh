@@ -2,7 +2,7 @@
 set -euo pipefail
 
 MORI_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MORI_VERSION="${MORI_VERSION:-0.1.2}"
+MORI_VERSION="${MORI_VERSION:-0.1.3}"
 MORI_SHA="${MORI_SHA:-development}"
 MORI_OUTPUT="${MORI_OUTPUT:-$MORI_ROOT/build}"
 MORI_SCRATCH="${MORI_SCRATCH:-$MORI_ROOT/.build/release-packaging}"

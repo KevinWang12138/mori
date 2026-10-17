@@ -6,7 +6,8 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import { lineNumbers, EditorView } from '@codemirror/view'
-import { BlockMath, InlineMath, LocalImage, CodeBlock, HeadingAnchors, configureAssetDirectory } from './extensions'
+import { BlockMath, InlineMath, LocalImage, CodeBlock, configureAssetDirectory } from './extensions'
+import { HeadingAnchors, FocusParagraph } from './editor-decorations'
 import { splitFrontMatter, requiresSourceMode, safeLink } from './document'
 import { createSourceEditor, configureSourceLanguage } from './source-editor'
 import { post, type DocumentPayload, type EditorSettings } from './bridge'
@@ -16,6 +17,7 @@ import { findInRich, insertItems } from './writing-tools'
 import { readMetadata, updateMetadata } from './metadata'
 import { editorLanguage, localize, setEditorLanguage, t } from './i18n'
 import { focusDocument } from './editor-focus'
+import { EditorSelectionUI } from './editor-selection'
 import './style.css'
 import 'katex/dist/katex.min.css'
 
@@ -28,6 +30,8 @@ const customStyle = document.createElement('style'); customStyle.id = 'custom-th
 let active: DocumentEditor | undefined
 let settings: EditorSettings | undefined
 const documents = new Map<string, DocumentEditor>()
+const selectionUI = new EditorSelectionUI({ active: () => active, typewriter: () => settings?.typewriterMode === true,
+  richHost, sourceHost, bubble, slash })
 
 class DocumentEditor {
   readonly id: string
@@ -53,27 +57,29 @@ class DocumentEditor {
       extensions: [StarterKit.configure({ codeBlock: false, link: { openOnClick: false, autolink: true } }),
         Markdown.configure({ markedOptions: { gfm: true, breaks: false }, indentation: { style: 'space', size: 2 } }),
         TableKit.configure({ table: { resizable: true } }), TaskList, TaskItem.configure({ nested: true }),
-        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, Placeholder.configure({ placeholder: () => t('把想法写下来，或输入 / 插入内容…') })],
+        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, FocusParagraph, Placeholder.configure({ placeholder: () => t('把想法写下来，或输入 / 插入内容…') })],
       content: requiresSourceMode(payload.markdown) ? '' : splitFrontMatter(payload.markdown).body, contentType: 'markdown',
       editorProps: { attributes: { 'aria-label': t('文章所见即所得编辑器'), spellcheck: 'true' },
         handlePaste: (_view, event) => this.handleFiles(event.clipboardData?.files),
         handleDrop: (_view, event) => this.handleFiles(event.dataTransfer?.files)
       },
-      onUpdate: () => {
+      onUpdate: ({ transaction }) => {
         if (this.suppress || this.mode !== 'rich') return
         this.markdown = splitFrontMatter(this.markdown).prefix + this.rich.getMarkdown() + '\n'
         this.richMarkdown = this.markdown
-        post({ type: 'change', id: this.id, markdown: this.markdown }); updateWritingTools()
+        post({ type: 'change', id: this.id, markdown: this.markdown })
+        if (active === this) selectionUI.requestUpdate(!transaction.getMeta('pointer'))
       },
-      onSelectionUpdate: () => updateWritingTools()
+      onSelectionUpdate: ({ transaction }) => {
+        if (active === this) selectionUI.requestUpdate(!transaction.getMeta('pointer'))
+      }
     })
     this.source = createSourceEditor(this.sourceMount, payload.markdown, value => {
       if (this.suppress || this.mode === 'rich') return
       this.markdown = value; post({ type: 'change', id: this.id, markdown: value })
       if (this.mode === 'split') this.schedulePreview()
-    }, view => {
-      if (settings?.typewriterMode) requestAnimationFrame(() => view.dispatch({ effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }) }))
-      this.syncPreviewScroll()
+    }, (_view, followCaret) => {
+      if (!this.suppress && active === this) selectionUI.requestUpdate(followCaret)
     })
     this.suppress = false
   }
@@ -109,7 +115,7 @@ class DocumentEditor {
     }
     document.body.dataset.mode = mode
     if (mode === 'split') this.schedulePreview()
-    bubble.hidden = true; slash.hidden = true
+    selectionUI.dismiss()
     if (changed && active === this) document.querySelector('.find-panel')?.remove()
     requestAnimationFrame(() => {
       this.source.view.requestMeasure()
@@ -184,7 +190,7 @@ function configure(payload: DocumentPayload): void {
     active.rich.view.dom.setAttribute('spellcheck', String(config.spellcheck))
     configureSourceLanguage(active.source.view, active.source.language, config.language,
       [active.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : [])])
-    active.setMode(payload.mode); updateWritingTools()
+    active.setMode(payload.mode); selectionUI.requestUpdate()
   }
 }
 
@@ -212,6 +218,7 @@ function load(payload: DocumentPayload): void {
 
 function command(name: string, payload: Record<string, unknown> = {}): void {
   if (name === 'dispose') {
+    selectionUI.dismiss()
     const id = String(payload.id); documents.get(id)?.dispose(); documents.delete(id); return
   }
   if (!active) return
@@ -262,33 +269,6 @@ for (const item of insertItems) {
 }
 bubble.hidden = true; slash.hidden = true
 
-function updateWritingTools(): void {
-  if (!active || active.mode !== 'rich') return
-  const { from, to, $from } = active.rich.state.selection
-  const coords = active.rich.view.coordsAtPos(from)
-  bubble.hidden = from === to || active.rich.isActive('codeBlock') || !active.rich.view.hasFocus()
-  if (!bubble.hidden) { bubble.style.top = `${Math.max(4, coords.top - 46)}px`; bubble.style.left = `${Math.max(8, Math.min(window.innerWidth - 230, coords.left))}px` }
-  const text = $from.parent.textContent
-  slash.hidden = !/^\/[\p{L}\p{N}]*$/u.test(text) || !$from.parent.isTextblock
-  if (!slash.hidden) {
-    const query = text.slice(1).toLocaleLowerCase()
-    for (const [index, child] of [...slash.children].entries()) (child as HTMLElement).hidden = !!query && !t(insertItems[index].label).toLocaleLowerCase().includes(query) && !insertItems[index].name.includes(query)
-    slash.style.top = `${Math.min(window.innerHeight - 360, coords.bottom + 10)}px`
-    slash.style.left = `${Math.min(window.innerWidth - 230, Math.max(8, coords.left))}px`
-  }
-  for (const child of [...active.rich.view.dom.children]) child.classList.remove('active-paragraph')
-  const selectionDOM = active.rich.view.domAtPos(from).node
-  let element = selectionDOM instanceof HTMLElement ? selectionDOM : selectionDOM.parentElement
-  while (element && element.parentElement !== active.rich.view.dom) element = element.parentElement
-  element?.classList.add('active-paragraph')
-  if (settings?.typewriterMode) requestAnimationFrame(() => {
-    if (!active) return
-    const next = active.rich.view.coordsAtPos(active.rich.state.selection.from)
-    const bounds = richHost.getBoundingClientRect()
-    richHost.scrollTop += next.top - bounds.top - bounds.height * 0.42
-  })
-}
-
 document.addEventListener('click', event => {
   const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
   if (!anchor) return
@@ -302,7 +282,7 @@ document.addEventListener('click', event => {
 })
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') { bubble.hidden = true; slash.hidden = true }
+  if (event.key === 'Escape') selectionUI.dismiss()
   if (event.key === 'ArrowDown' && !slash.hidden) { (slash.querySelector('button:not([hidden])') as HTMLButtonElement)?.focus(); event.preventDefault() }
 })
 

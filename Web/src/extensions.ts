@@ -1,11 +1,10 @@
-import { Node, InputRule, mergeAttributes, Extension } from '@tiptap/core'
+import { Node, InputRule, mergeAttributes } from '@tiptap/core'
 import { Plugin } from '@tiptap/pm/state'
-import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import Image from '@tiptap/extension-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import katex from 'katex'
-import { assetURL, headingID } from './document'
+import { assetURL } from './document'
 import { editFields } from './dialogs'
 import { renderDiagram } from './renderer'
 import { localize } from './i18n'
@@ -35,6 +34,17 @@ export const LocalImage = Image.extend({
 }).configure({ allowBase64: true })
 
 export const CodeBlock = CodeBlockLowlight.extend({
+  // ===== 代码高亮只处理内容事务，选区变化复用现有装饰以免全文扫描 =====
+  addProseMirrorPlugins() {
+    return (this.parent?.() ?? []).map((plugin: Plugin<unknown>) => {
+      const state = plugin.spec.state
+      if (!state || !plugin.spec.props?.decorations) return plugin
+      return new Plugin<unknown>({ ...plugin.spec, state: { ...state,
+        apply: (transaction, previous, oldState, newState) => transaction.docChanged
+          ? state.apply(transaction, previous, oldState, newState) : previous
+      } })
+    })
+  },
   addNodeView() {
     return ({ node, getPos, editor }) => {
       let current = node
@@ -62,8 +72,10 @@ export const CodeBlock = CodeBlockLowlight.extend({
         dom: wrapper, contentDOM: code,
         update(next) {
           if (next.type !== current.type) return false
+          const changed = !next.eq(current)
           current = next; if (document.activeElement !== language) language.value = String(next.attrs.language ?? '')
-          updateDiagram(); return true
+          if (changed) updateDiagram()
+          return true
         },
         stopEvent: event => toolbar.contains(event.target as globalThis.Node),
         destroy() { if (timer) clearTimeout(timer) }
@@ -116,18 +128,3 @@ function mathExtension(block: boolean) {
 
 export const InlineMath = mathExtension(false)
 export const BlockMath = mathExtension(true)
-
-export const HeadingAnchors = Extension.create({
-  name: 'headingAnchors',
-  addProseMirrorPlugins() {
-    return [new Plugin({ props: {
-      decorations(state) {
-        const seen = new Map<string, number>(); const decorations: Decoration[] = []
-        state.doc.descendants((node, position) => {
-          if (node.type.name === 'heading') decorations.push(Decoration.node(position, position + node.nodeSize, { id: headingID(node.textContent, seen) }))
-        })
-        return DecorationSet.create(state.doc, decorations)
-      }
-    } })]
-  }
-})

@@ -57,7 +57,7 @@ export function configureSourceLanguage(view: EditorView, compartment: Compartme
 }
 
 export function createSourceEditor(parent: HTMLElement, content: string, onChange: (value: string) => void,
-  onSelection: (view: EditorView) => void): { view: EditorView; numbers: Compartment; language: Compartment; editable: Compartment } {
+  onSelection: (view: EditorView, followCaret: boolean) => void): { view: EditorView; numbers: Compartment; language: Compartment; editable: Compartment } {
   const numbers = new Compartment()
   const language = new Compartment()
   const editable = new Compartment()
@@ -71,7 +71,7 @@ export function createSourceEditor(parent: HTMLElement, content: string, onChang
       keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       EditorView.updateListener.of(update => {
         if (update.docChanged) onChange(update.state.doc.toString())
-        if (update.selectionSet || update.docChanged) onSelection(view)
+        if (update.selectionSet || update.docChanged) onSelection(view, !update.transactions.some(transaction => transaction.isUserEvent('select.pointer')))
       })
     ] })
   })
