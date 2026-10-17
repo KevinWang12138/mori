@@ -16,6 +16,20 @@ test('扩展语法使用源码模式保护文章', () => {
   for (const text of ['# 标题\n\n正文 **加粗**', '- [x] 完成', '| a | b |\n|---|---|\n| 1 | 2 |', '```html\n<div>code only</div>\n```', '$E=mc^2$', '$$\na+b\n$$']) assert.equal(requiresSourceMode(text), false, text)
 })
 
+test('HTML 注释和闭合标签原样保留，代码块内的相同文本不影响写作模式', () => {
+  for (const text of ['正文\n<!-- 发布前备注 -->', '</Custom>', '<?instruction value?>', '<!DOCTYPE html>']) {
+    assert.equal(requiresSourceMode(text), true, text)
+    assert.equal(requiresSourceMode('```html\n' + text + '\n```'), false, text)
+  }
+})
+
+test('更长的闭合围栏之后仍检查扩展语法，较短或不同围栏不会提前闭合', () => {
+  assert.equal(requiresSourceMode('```text\n示例\n````\n\n[^note]: 正文脚注'), true)
+  assert.equal(requiresSourceMode('~~~text\n示例\n~~~~\n\n<!-- 正文注释 -->'), true)
+  assert.equal(requiresSourceMode('````text\n```\n<!-- 代码 -->\n````'), false)
+  assert.equal(requiresSourceMode('```text\n~~~\n<div>代码</div>\n```'), false)
+})
+
 test('链接拒绝执行脚本和隐式协议', () => {
   assert.equal(safeLink('javascript:alert(1)'), null)
   assert.equal(safeLink('file:///etc/passwd'), null)

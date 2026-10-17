@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 extension DocumentStore {
     func exportArticle(_ format: ArticleExportFormat) {
         guard let document = activeDocument else { return }
+        let assets = exportAssets(for: document)
         var destination: URL?
         if format != .print {
             let panel = NSSavePanel(); panel.canCreateDirectories = true
@@ -13,9 +14,9 @@ extension DocumentStore {
             destination = url
         }
         let capturedDestination = destination
-        editor.exportHTML { [weak self] html in
+        editor.exportHTML(documentID: document.id) { [weak self] html in
             guard let self, let html else { self?.errorMessage = L10n.text("导出暂时无法完成。请等编辑器加载后重试。"); return }
-            let standalone = ArticleExportService.shared.standaloneHTML(html, assets: self.editor.assets)
+            let standalone = ArticleExportService.shared.standaloneHTML(html, assets: assets)
             if format == .html, let capturedDestination {
                 do { try standalone.write(to: capturedDestination, atomically: true, encoding: .utf8); self.notice = L10n.text("HTML 已导出，包含本地图片与公式字体。") }
                 catch { self.errorMessage = L10n.text("HTML 未能写入。请检查目标文件夹权限。") }
@@ -29,19 +30,28 @@ extension DocumentStore {
     }
 
     func copyMarkdown() {
+        guard let id = activeID else { return }
         editor.flush { [weak self] in
-            guard let content = self?.activeDocument?.content else { return }
+            guard let content = self?.documents.first(where: { $0.id == id })?.content else { return }
             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(content, forType: .string)
             self?.notice = L10n.text("Markdown 已复制。")
         }
     }
 
     func copyHTML() {
-        editor.exportHTML { [weak self] html in
-            guard let self, let html else { return }
-            let standalone = ArticleExportService.shared.standaloneHTML(html, assets: self.editor.assets)
+        guard let document = activeDocument else { return }
+        let assets = exportAssets(for: document)
+        editor.exportHTML(documentID: document.id) { [weak self] html in
+            guard let self, let html else { self?.errorMessage = L10n.text("导出暂时无法完成。请等编辑器加载后重试。"); return }
+            let standalone = ArticleExportService.shared.standaloneHTML(html, assets: assets)
             NSPasteboard.general.clearContents(); NSPasteboard.general.setString(standalone, forType: .html)
             NSPasteboard.general.setString(standalone, forType: .string); self.notice = L10n.text("HTML 已复制。")
         }
+    }
+
+    private func exportAssets(for document: WritingDocument) -> AssetSchemeHandler {
+        let assets = AssetSchemeHandler()
+        assets.roots = EditorBridge.assetRoots(for: document, workspaceURL: workspaceURL)
+        return assets
     }
 }

@@ -9,15 +9,24 @@ public struct FrontMatterParts: Equatable {
 public enum FrontMatter {
     // ===== 只在文件开头识别 YAML，保留原始分隔符与换行 =====
     public static func split(_ text: String) -> FrontMatterParts {
-        let lines = text.components(separatedBy: "\n")
-        guard lines.first?.trimmingCharacters(in: .whitespacesAndNewlines) == "---", lines.count > 1,
-            let end = lines.indices.dropFirst().first(where: {
-                ["---", "..."].contains(lines[$0].trimmingCharacters(in: .whitespacesAndNewlines))
-            }) else { return FrontMatterParts(prefix: "", yaml: "", body: text) }
-        let prefix = lines[0...end].joined(separator: "\n") + (end < lines.count - 1 ? "\n" : "")
-        let yaml = lines[1..<end].joined(separator: "\n")
-        let body = end + 1 < lines.count ? lines[(end + 1)...].joined(separator: "\n") : ""
-        return FrontMatterParts(prefix: prefix, yaml: yaml, body: body)
+        let unchanged = FrontMatterParts(prefix: "", yaml: "", body: text)
+        guard let firstBreak = text.firstIndex(where: { $0 == "\n" || $0 == "\r\n" }),
+            text[..<firstBreak].trimmingCharacters(in: .whitespacesAndNewlines) == "---" else { return unchanged }
+        var start = text.index(after: firstBreak)
+        // ===== 1.只扫描元信息区域，避免读取标题时把整篇长文拆成字符串数组 =====
+        while start < text.endIndex {
+            let end = text[start...].firstIndex(where: { $0 == "\n" || $0 == "\r\n" }) ?? text.endIndex
+            let line = text[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+            if line == "---" || line == "..." {
+                let prefixEnd = end == text.endIndex ? end : text.index(after: end)
+                let header = String(text[..<end]).components(separatedBy: "\n")
+                return FrontMatterParts(prefix: String(text[..<prefixEnd]), yaml: header.dropFirst().dropLast().joined(separator: "\n"),
+                    body: String(text[prefixEnd...]))
+            }
+            if end == text.endIndex { break }
+            start = text.index(after: end)
+        }
+        return unchanged
     }
 
     public static func value(_ key: String, in text: String) -> String? {

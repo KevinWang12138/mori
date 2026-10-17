@@ -1,6 +1,6 @@
 import { Node, InputRule, mergeAttributes } from '@tiptap/core'
 import { Plugin } from '@tiptap/pm/state'
-import Image from '@tiptap/extension-image'
+import Image, { type ImageOptions } from '@tiptap/extension-image'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import katex from 'katex'
@@ -9,15 +9,15 @@ import { editFields } from './dialogs'
 import { renderDiagram } from './renderer'
 import { localize } from './i18n'
 
-let getDirectory = () => ''
-export function configureAssetDirectory(getter: () => string): void { getDirectory = getter }
-
-export const LocalImage = Image.extend({
+export const LocalImage = Image.extend<ImageOptions & { directory: () => string }>({
+  addOptions() { return { ...this.parent!(), directory: () => '' } },
   addNodeView() {
+    const getDirectory = this.options.directory
     return ({ node, getPos, editor }) => {
       let current = node
       const image = document.createElement('img')
       const update = () => {
+        image.dataset.moriSource = String(current.attrs.src ?? '')
         image.src = assetURL(String(current.attrs.src ?? ''), getDirectory())
         image.alt = String(current.attrs.alt ?? ''); image.title = String(current.attrs.title ?? '')
       }

@@ -35,6 +35,10 @@ public struct WritingStatistics: Equatable {
 public enum MarkdownAnalysis {
     // ===== 提取目录并跳过代码块与文章元信息 =====
     public static func headings(in text: String) -> [MarkdownHeading] {
+        headings(in: text, firstOnly: false)
+    }
+
+    private static func headings(in text: String, firstOnly: Bool) -> [MarkdownHeading] {
         let parts = FrontMatter.split(text)
         let prefixLines = parts.prefix.components(separatedBy: "\n").count - 1
         let lines = parts.body.components(separatedBy: "\n")
@@ -75,13 +79,14 @@ public enum MarkdownAnalysis {
             usedIDs[base] = duplicate + 1
             results.append(MarkdownHeading(id: duplicate == 0 ? base : "\(base)-\(duplicate)", title: title,
                 level: headingLevel, line: index + prefixLines + 1, offset: offset))
+            if firstOnly { break }
         }
         return results
     }
 
     public static func title(in text: String, fallback: String = "未命名文章") -> String {
         if let title = FrontMatter.value("title", in: text), !title.isEmpty { return title }
-        return headings(in: text).first?.title ?? fallback
+        return headings(in: text, firstOnly: true).first?.title ?? fallback
     }
 
     public static func slug(_ title: String) -> String {

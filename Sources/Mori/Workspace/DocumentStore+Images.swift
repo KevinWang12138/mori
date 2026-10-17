@@ -21,6 +21,9 @@ extension DocumentStore {
         do {
             let path = try ImageImportService.importImage(data: data, name: name, articleURL: url)
             if activeID != documentID { activate(documentID) }
+            // ===== 1.先同步目标文章和图片目录，避免 SwiftUI 刷新前把图片插入上一个标签 =====
+            editor.synchronize(document: document, mode: mode, preferences: preferences.value, focus: focusMode,
+                typewriter: typewriterMode, workspaceURL: workspaceURL)
             editor.perform("insertImage", payload: ["src": path, "alt": URL(fileURLWithPath: name).deletingPathExtension().lastPathComponent])
         } catch { errorMessage = L10n.text("图片未能导入。请检查文章文件夹的写入权限，图片需小于 25 MB。") }
     }

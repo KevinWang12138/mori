@@ -66,7 +66,7 @@ Requires **macOS 14 or later**. Releases include a universal app for Apple Silic
 
 ### First launch on macOS
 
-Version 0.1.3 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
+Version 0.1.4 uses ad-hoc signing and has not been notarized with Apple Developer ID. If macOS displays “Mori Not Opened” when you first launch it:
 
 1. Select **Done** to keep the app installed.
 2. Open **System Settings → Privacy & Security**.

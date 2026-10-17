@@ -65,14 +65,15 @@ export function formatSource(view: EditorView, name: string, payload: Record<str
       codeblock: '\n```text\n' + (text || t('代码')) + '\n```\n',
       mermaid: t('\n```mermaid\nflowchart LR\n  想法 --> 写作 --> 发布\n```\n'),
       math: '\n$$\nE = mc^2\n$$\n', divider: '\n\n---\n\n',
-      insertImage: `![${String(payload.alt ?? '')}](${String(payload.src ?? '').replaceAll(' ', '%20')})`,
+      insertImage: `![${String(payload.alt ?? '').replace(/[\\\[\]]/g, '\\$&').replace(/\r?\n/g, ' ')}](${String(payload.src ?? '').replaceAll(' ', '%20').replaceAll('(', '%28').replaceAll(')', '%29')})`,
       insertText: String(payload.text ?? '')
     }
     const prefixes: Record<string, string> = { heading1: '# ', heading2: '## ', heading3: '### ', bullet: '- ', ordered: '1. ', task: '- [ ] ', quote: '> ', paragraph: '' }
     if (name in prefixes) {
-      const firstLine = view.state.doc.lineAt(range.from); const lastLine = view.state.doc.lineAt(range.to)
+      const firstLine = view.state.doc.lineAt(range.from)
+      const lastLine = view.state.doc.lineAt(range.empty ? range.to : range.to - 1)
       from = firstLine.from; to = lastLine.to
-      insert = view.state.sliceDoc(from, to).split('\n').map(line => prefixes[name] + line.replace(/^(?:#{1,6} |> |- |\d+\. |- \[[ x]\] )/, '')).join('\n')
+      insert = view.state.sliceDoc(from, to).split('\n').map(line => prefixes[name] + line.replace(/^(?:#{1,6} |> |[-*+] \[[ xX]\] |[-*+] |\d+[.)] )/, '')).join('\n')
     } else if (name in blocks) { insert = blocks[name] }
     else { return }
     cursor = from + insert.length

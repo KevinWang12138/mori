@@ -28,6 +28,7 @@ extension DocumentStore {
         let panel = NSOpenPanel(); panel.canChooseFiles = false; panel.canChooseDirectories = true
         panel.prompt = L10n.text("打开博客文件夹")
         guard panel.runModal() == .OK, let url = panel.url else { return }
+        if workspaceURL != url { articles = []; searchCache = [:] }
         workspaceURL = url; refreshWorkspace(); scheduleRecovery(); showSidebar = true
     }
 
@@ -57,6 +58,7 @@ extension DocumentStore {
             documents[index].recovery.fingerprint = fingerprint
             documents[index].recovery.savedContent = document.content
             documents[index].lastSaved = Date(); documents[index].saveFailure = nil
+            if searchContent { searchCache[url.path] = document.content }
             if captureVersion {
                 do { try recovery.addRevision(document.content, for: document.revisionKey); revisionDates[id] = Date() }
                 catch { notice = L10n.text("文章已保存，本机历史版本暂时无法写入。") }
@@ -89,6 +91,7 @@ extension DocumentStore {
             documents[index].recovery.path = url.path; documents[index].recovery.fingerprint = fingerprint
             documents[index].recovery.savedContent = document.content; documents[index].conflict = false
             documents[index].saveFailure = nil; documents[index].lastSaved = Date()
+            if searchContent { searchCache[url.path] = document.content }
             do { try recovery.addRevision(document.content, for: url.path) }
             catch { notice = L10n.text("文章已保存，本机历史版本暂时无法写入。") }
             NSDocumentController.shared.noteNewRecentDocumentURL(url)
@@ -134,23 +137,6 @@ extension DocumentStore {
             documents[index].saveFailure = nil; editor.resetDocument(); loadRevisions(); flushRecovery()
             notice = L10n.text("已载入磁盘版本，原稿件保存在历史中。")
         } catch { reportFileError(error, fallback: L10n.text("磁盘版本无法载入，当前稿件已保留。")) }
-    }
-
-    func checkExternalChanges() {
-        for index in documents.indices {
-            guard let url = documents[index].url, let expected = documents[index].recovery.fingerprint,
-                !documents[index].conflict else { continue }
-            guard let snapshot = try? DocumentFileService.read(url) else {
-                documents[index].conflict = true; continue
-            }
-            guard snapshot.fingerprint != expected else { continue }
-            if documents[index].isDirty { documents[index].conflict = true; autosaveTasks[documents[index].id]?.cancel() }
-            else {
-                documents[index].recovery.content = snapshot.content; documents[index].recovery.savedContent = snapshot.content
-                documents[index].recovery.fingerprint = snapshot.fingerprint
-                documents[index].recovery.usesCRLF = snapshot.usesCRLF; documents[index].recovery.hasBOM = snapshot.hasBOM
-            }
-        }
     }
 
     func reportFileError(_ error: Error, fallback: String) {

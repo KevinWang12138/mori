@@ -68,9 +68,9 @@ struct BlogMetadataPanel: View {
         categories = cleanArray(FrontMatter.value("categories", in: content) ?? "")
         draft = FrontMatter.value("draft", in: content) != "false"
         captureBaseline()
-        let id = loadedID
-        store.editor.readMetadata { metadata in
-            guard let metadata, store.activeID == id, !modified else { return }
+        guard let id = loadedID else { return }
+        store.editor.readMetadata(documentID: id) { metadata in
+            guard let metadata, store.activeID == id, store.activeDocument?.content == content, !modified else { return }
             title = metadata["title"] as? String ?? title
             description = metadata["description"] as? String ?? description
             date = metadata[dateKey] as? String ?? date

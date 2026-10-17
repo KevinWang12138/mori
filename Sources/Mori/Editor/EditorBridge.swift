@@ -6,7 +6,7 @@ enum EditorMessage {
     case openURL(String), openArticle(String), asset(UUID, Data, String), action(String), unsupported, error
 }
 
-private struct WebEditorSettings: Encodable {
+private struct WebEditorSettings: Encodable, Equatable {
     var language: String
     var theme: String
     var surface: String
@@ -23,6 +23,11 @@ private struct WebEditorSettings: Encodable {
     var focusMode: Bool
     var typewriterMode: Bool
     var customCSS: String
+}
+
+private struct WebConfigurationPayload: Encodable {
+    var mode: String
+    var settings: WebEditorSettings
 }
 
 private struct WebDocumentPayload: Encodable {
@@ -44,7 +49,9 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
     private var pending: WebDocumentPayload?
     private var lastID: String?
     private var lastMarkdown: String?
-    private var lastSettings: String?
+    private var lastSettings: WebEditorSettings?
+    private var lastMode: String?
+    private var lastDirectory: String?
     private var queued: [(String, [String: Any])] = []
 
     func makeWebView() -> WKWebView {
@@ -62,9 +69,7 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
 
     func synchronize(document: WritingDocument, mode: EditorMode, preferences: AppearancePreferences,
         focus: Bool, typewriter: Bool, workspaceURL: URL?) {
-        var roots = document.url.map { [$0.deletingLastPathComponent()] } ?? []
-        if let workspaceURL, let url = document.url, url.path.hasPrefix(workspaceURL.path + "/") { roots.append(workspaceURL) }
-        assets.roots = roots
+        assets.roots = Self.assetRoots(for: document, workspaceURL: workspaceURL)
         let theme = preferences.theme
         let settings = WebEditorSettings(language: L10n.language.rawValue, theme: theme.rawValue, surface: theme.surface, text: theme.text, muted: theme.muted,
             accent: theme.accent, font: preferences.font.css, fontSize: preferences.fontSize, lineHeight: preferences.lineHeight,
@@ -75,15 +80,18 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
         pending = payload; sendPending()
     }
 
+    // ===== 先比较真实状态，只在变化时编码，避免每次界面刷新重复传送全文 =====
     private func sendPending() {
-        guard ready, let pending, let encoded = encode(pending) else { return }
-        let stamp = (encode(pending.settings) ?? "") + pending.mode + pending.directory
-        if pending.id != lastID || pending.markdown != lastMarkdown {
+        guard ready, let pending else { return }
+        if pending.id != lastID || pending.markdown != lastMarkdown || pending.directory != lastDirectory {
+            guard let encoded = encode(pending) else { return }
             evaluate("window.Mori.load(\(encoded))")
-            lastID = pending.id; lastMarkdown = pending.markdown; lastSettings = stamp
-        } else if stamp != lastSettings {
-            evaluate("window.Mori.configure(\(encoded))"); lastSettings = stamp
+            lastID = pending.id; lastMarkdown = pending.markdown; lastDirectory = pending.directory
+        } else if pending.settings != lastSettings || pending.mode != lastMode {
+            guard let encoded = encode(WebConfigurationPayload(mode: pending.mode, settings: pending.settings)) else { return }
+            evaluate("window.Mori.configure(\(encoded))")
         }
+        lastSettings = pending.settings; lastMode = pending.mode
     }
 
     func resetDocument() { lastID = nil; lastMarkdown = nil; objectWillChange.send() }
@@ -101,22 +109,32 @@ final class EditorBridge: NSObject, ObservableObject, WKScriptMessageHandler, WK
         webView.evaluateJavaScript("window.Mori.flush()") { [weak self] result, error in
             if error == nil, let dictionary = result as? [String: Any], let idString = dictionary["id"] as? String,
                 let id = UUID(uuidString: idString), let markdown = dictionary["markdown"] as? String {
-                self?.lastMarkdown = markdown; self?.onChange?(id, markdown)
+                if self?.lastID == idString { self?.lastMarkdown = markdown }
+                self?.onChange?(id, markdown)
             }
             completion()
         }
     }
 
-    func exportHTML(completion: @escaping (String?) -> Void) {
+    func exportHTML(documentID: UUID, completion: @escaping (String?) -> Void) {
         guard ready, let webView else { completion(nil); return }
-        webView.callAsyncJavaScript("return await window.Mori.exportHTML()", arguments: [:], in: nil, in: .page) { result in
+        webView.callAsyncJavaScript("return await window.Mori.exportHTML(documentID)", arguments: ["documentID": documentID.uuidString], in: nil, in: .page) { result in
             switch result { case .success(let value): completion(value as? String); case .failure: completion(nil) }
         }
     }
 
-    func readMetadata(completion: @escaping ([String: Any]?) -> Void) {
+    func readMetadata(documentID: UUID, completion: @escaping ([String: Any]?) -> Void) {
         guard ready, let webView else { completion(nil); return }
-        webView.evaluateJavaScript("window.Mori.metadata()") { result, _ in completion(result as? [String: Any]) }
+        webView.callAsyncJavaScript("return window.Mori.metadata(documentID)", arguments: ["documentID": documentID.uuidString], in: nil, in: .page) { result in
+            switch result { case .success(let value): completion(value as? [String: Any]); case .failure: completion(nil) }
+        }
+    }
+
+    // ===== 导出固定文章的资源范围，切换标签不改变正在导出的图片权限 =====
+    static func assetRoots(for document: WritingDocument, workspaceURL: URL?) -> [URL] {
+        var roots = document.url.map { [$0.deletingLastPathComponent()] } ?? []
+        if let workspaceURL, let url = document.url, url.path.hasPrefix(workspaceURL.path + "/") { roots.append(workspaceURL) }
+        return roots
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {

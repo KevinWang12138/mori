@@ -16,6 +16,13 @@ const md: MarkdownIt = new MarkdownIt({ html: true, linkify: true, typographer: 
   }
 }).use(footnote).use(tasks, { enabled: false }).use(texmath, { engine: katex, delimiters: 'dollars', katexOptions: { throwOnError: false, trust: false, strict: 'ignore' } })
 
+// ===== 图片描述中的转义字符按正文保留，避免解析器忽略 text_special 标记 =====
+const originalAltText = md.renderer.renderInlineAsText.bind(md.renderer)
+md.renderer.renderInlineAsText = (tokens, options, environment) => {
+  for (const token of tokens) if (token.type === 'text_special') token.type = 'text'
+  return originalAltText(tokens, options, environment)
+}
+
 const originalImage = md.renderer.rules.image!
 md.renderer.rules.image = (tokens, index, options, environment: { directory?: string }, self) => {
   const src = tokens[index].attrGet('src') ?? ''

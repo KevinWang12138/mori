@@ -25,11 +25,11 @@ declare global {
     webkit?: { messageHandlers: { mori: { postMessage: (message: NativeMessage) => void } } }
     Mori: {
       load: (payload: DocumentPayload) => void
-      configure: (payload: DocumentPayload) => void
+      configure: (payload: Pick<DocumentPayload, 'mode' | 'settings'>) => void
       command: (name: string, payload?: Record<string, unknown>) => void
       flush: () => { id: string; markdown: string }
-      exportHTML: () => Promise<string>
-      metadata: () => Record<string, unknown>
+      exportHTML: (documentID: string) => Promise<string | null>
+      metadata: (documentID: string) => Record<string, unknown> | null
     }
   }
 }

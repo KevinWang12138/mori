@@ -82,4 +82,50 @@ final class DocumentSafetyTests: XCTestCase {
         let history = try store.revisions(for: "article")
         XCTAssertEqual(history.count, 50); XCTAssertEqual(history.first?.content, "version 54"); XCTAssertEqual(history.last?.content, "version 5")
     }
+
+    func testBackgroundCheckRejectsResultsAfterSaveSaveAsOrDocumentReplacement() throws {
+        let file = directory.appendingPathComponent("article.md")
+        let hash = try DocumentFileService.write("original", to: file, expectedFingerprint: nil)
+        var document = RecoverableDocument(path: file.path, content: "original", savedContent: "original", fingerprint: hash)
+        try "external".write(to: file, atomically: true, encoding: .utf8)
+        let check = try XCTUnwrap(ExternalFileCheck(document: document))
+        XCTAssertEqual(check.snapshot?.content, "external")
+        XCTAssertTrue(check.stillMatches(document))
+        document.content = "unsaved draft"
+        XCTAssertTrue(check.stillMatches(document), "未保存的本机修改仍需收到冲突，不能被磁盘结果覆盖")
+        document.fingerprint = "newly-saved-version"
+        XCTAssertFalse(check.stillMatches(document))
+        document.fingerprint = hash; document.path = directory.appendingPathComponent("new.md").path
+        XCTAssertFalse(check.stillMatches(document))
+        let reopened = RecoverableDocument(path: file.path, content: "original", savedContent: "original", fingerprint: hash)
+        XCTAssertFalse(check.stillMatches(reopened))
+    }
+
+    func testBackgroundCheckReportsMissingFileAndSkipsUnsavedDraft() throws {
+        let document = RecoverableDocument(path: directory.appendingPathComponent("missing.md").path, content: "draft", fingerprint: "old")
+        let check = try XCTUnwrap(ExternalFileCheck(document: document))
+        XCTAssertNil(check.snapshot); XCTAssertTrue(check.stillMatches(document))
+        XCTAssertNil(ExternalFileCheck(document: RecoverableDocument(content: "draft")))
+    }
+
+    func testSearchIndexSkipsOversizedAndInvalidUTF8Files() throws {
+        try "正文可搜索".write(to: directory.appendingPathComponent("small.md"), atomically: true, encoding: .utf8)
+        try Data(repeating: 32, count: 2 * 1024 * 1024).write(to: directory.appendingPathComponent("large.md"))
+        try Data([0xFF, 0xFE]).write(to: directory.appendingPathComponent("invalid.md"))
+        let articles = try WorkspaceScanner.scan(directory)
+        let contents = WorkspaceScanner.searchContents(articles)
+        XCTAssertEqual(contents, [directory.appendingPathComponent("small.md").path: "正文可搜索"])
+    }
+
+    func testCancelledWorkspaceWorkStopsBeforeReadingArticles() async throws {
+        try "正文".write(to: directory.appendingPathComponent("article.md"), atomically: true, encoding: .utf8)
+        let root = try XCTUnwrap(directory)
+        let articles = try WorkspaceScanner.scan(root)
+        let worker = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            XCTAssertTrue(WorkspaceScanner.searchContents(articles).isEmpty)
+            XCTAssertThrowsError(try WorkspaceScanner.scan(root)) { XCTAssertTrue($0 is CancellationError) }
+        }
+        try await worker.value
+    }
 }

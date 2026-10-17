@@ -7,6 +7,7 @@ struct LibrarySidebar: View {
     @State private var recentURLs: [URL] = []
 
     var body: some View {
+        let articles = store.visibleArticles
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(L10n.text("文章库")).font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
@@ -32,7 +33,7 @@ struct LibrarySidebar: View {
                 }.padding(.horizontal, 19).padding(.top, 9)
             }
             ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
+                LazyVStack(alignment: .leading, spacing: 4) {
                     if !store.documents.filter({ $0.url == nil }).isEmpty {
                         sectionLabel(L10n.text("草稿"))
                         ForEach(store.documents.filter { $0.url == nil && (store.query.isEmpty || $0.title.localizedCaseInsensitiveContains(store.query) || (store.searchContent && $0.content.localizedCaseInsensitiveContains(store.query))) }) { document in
@@ -43,13 +44,13 @@ struct LibrarySidebar: View {
                         HStack {
                             sectionLabel(root.lastPathComponent)
                             Spacer()
-                            Text("\(store.visibleArticles.count)").font(.system(size: 10)).foregroundStyle(.tertiary).padding(.top, 18)
+                            Text("\(articles.count)").font(.system(size: 10)).foregroundStyle(.tertiary).padding(.top, 18)
                         }
-                        if store.visibleArticles.isEmpty {
+                        if articles.isEmpty {
                             Text(store.query.isEmpty ? L10n.text("文件夹中还没有 Markdown 文章。") : L10n.text("没有找到匹配的文章。"))
                                 .font(.system(size: 11)).foregroundStyle(.secondary).padding(.vertical, 12).padding(.horizontal, 8)
                         }
-                        ForEach(store.visibleArticles) { article in
+                        ForEach(articles) { article in
                             sidebarRow(title: article.url.deletingPathExtension().lastPathComponent,
                                 subtitle: article.relativePath.contains("/") ? article.relativePath : nil,
                                 icon: "doc.text", selected: store.activeDocument?.url == article.url) { store.open(article.url) }

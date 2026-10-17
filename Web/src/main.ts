@@ -6,9 +6,9 @@ import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Placeholder from '@tiptap/extension-placeholder'
 import { lineNumbers, EditorView } from '@codemirror/view'
-import { BlockMath, InlineMath, LocalImage, CodeBlock, configureAssetDirectory } from './extensions'
+import { BlockMath, InlineMath, LocalImage, CodeBlock } from './extensions'
 import { HeadingAnchors, FocusParagraph } from './editor-decorations'
-import { splitFrontMatter, requiresSourceMode, safeLink } from './document'
+import { splitFrontMatter, requiresSourceMode, safeLink, assetURL } from './document'
 import { createSourceEditor, configureSourceLanguage } from './source-editor'
 import { post, type DocumentPayload, type EditorSettings } from './bridge'
 import { renderMarkdown, renderDiagrams } from './renderer'
@@ -18,6 +18,7 @@ import { readMetadata, updateMetadata } from './metadata'
 import { editorLanguage, localize, setEditorLanguage, t } from './i18n'
 import { focusDocument } from './editor-focus'
 import { EditorSelectionUI } from './editor-selection'
+import { ArticlePreview } from './article-preview'
 import './style.css'
 import 'katex/dist/katex.min.css'
 
@@ -44,8 +45,17 @@ class DocumentEditor {
   readonly source: ReturnType<typeof createSourceEditor>
   private suppress = false
   private richMarkdown: string
-  private previewTimer?: ReturnType<typeof setTimeout>
-  private previewSequence = 0
+  private sourceLanguage = editorLanguage()
+  private showLineNumbers = true
+  readonly preview = new ArticlePreview(async content => {
+    const staging = document.createElement('article'); staging.className = 'markdown-content'
+    staging.innerHTML = renderMarkdown(content.markdown, content.directory)
+    await renderDiagrams(staging, content.dark)
+    return staging
+  }, staging => {
+    if (active !== this || this.mode !== 'split') return
+    const scroll = preview.scrollTop; preview.replaceChildren(staging); preview.scrollTop = scroll
+  }, () => post({ type: 'error' }))
 
   constructor(payload: DocumentPayload) {
     this.suppress = true
@@ -57,7 +67,7 @@ class DocumentEditor {
       extensions: [StarterKit.configure({ codeBlock: false, link: { openOnClick: false, autolink: true } }),
         Markdown.configure({ markedOptions: { gfm: true, breaks: false }, indentation: { style: 'space', size: 2 } }),
         TableKit.configure({ table: { resizable: true } }), TaskList, TaskItem.configure({ nested: true }),
-        LocalImage, CodeBlock, InlineMath, BlockMath, HeadingAnchors, FocusParagraph, Placeholder.configure({ placeholder: () => t('把想法写下来，或输入 / 插入内容…') })],
+        LocalImage.configure({ directory: () => this.directory }), CodeBlock, InlineMath, BlockMath, HeadingAnchors, FocusParagraph, Placeholder.configure({ placeholder: () => t('把想法写下来，或输入 / 插入内容…') })],
       content: requiresSourceMode(payload.markdown) ? '' : splitFrontMatter(payload.markdown).body, contentType: 'markdown',
       editorProps: { attributes: { 'aria-label': t('文章所见即所得编辑器'), spellcheck: 'true' },
         handlePaste: (_view, event) => this.handleFiles(event.clipboardData?.files),
@@ -86,9 +96,14 @@ class DocumentEditor {
 
   // ===== 外部内容替换只更新编辑器状态，不触发保存回写 =====
   replace(payload: DocumentPayload): void {
-    const changed = this.markdown !== payload.markdown || this.directory !== payload.directory
-    this.directory = payload.directory
-    if (!changed) return
+    if (this.directory !== payload.directory) {
+      this.directory = payload.directory
+      for (const image of this.rich.view.dom.querySelectorAll<HTMLImageElement>('img[data-mori-source]')) {
+        image.src = assetURL(image.dataset.moriSource ?? '', this.directory)
+      }
+    }
+    if (this.markdown === payload.markdown) return
+    this.preview.cancel()
     this.suppress = true; this.markdown = payload.markdown
     this.source.view.dispatch({ changes: { from: 0, to: this.source.view.state.doc.length, insert: payload.markdown } })
     if (!requiresSourceMode(payload.markdown)) {
@@ -109,18 +124,28 @@ class DocumentEditor {
       this.source.view.dispatch({ changes: { from: 0, to: this.source.view.state.doc.length, insert: this.markdown } })
     }
     this.suppress = false
-    this.rich.setEditable(mode === 'rich', false)
+    if (this.rich.isEditable !== (mode === 'rich')) this.rich.setEditable(mode === 'rich', false)
     if (this.source.view.state.facet(EditorView.editable) !== (mode !== 'rich')) {
       this.source.view.dispatch({ effects: this.source.editable.reconfigure(EditorView.editable.of(mode !== 'rich')) })
     }
     document.body.dataset.mode = mode
     if (mode === 'split') this.schedulePreview()
+    else this.preview.cancel()
     selectionUI.dismiss()
     if (changed && active === this) document.querySelector('.find-panel')?.remove()
     requestAnimationFrame(() => {
       this.source.view.requestMeasure()
       if (changed && active === this) focusDocument(this.rich, this.source.view, mode, false)
     })
+  }
+
+  // ===== 只有语言或行号变化时才重配置源码编辑器，字体与主题调整不重建插件 =====
+  configureSource(config: EditorSettings): void {
+    const effects = this.showLineNumbers === config.showLineNumbers ? []
+      : [this.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : [])]
+    if (this.sourceLanguage !== config.language) configureSourceLanguage(this.source.view, this.source.language, config.language, effects)
+    else if (effects.length) this.source.view.dispatch({ effects })
+    this.sourceLanguage = config.language; this.showLineNumbers = config.showLineNumbers
   }
 
   handleFiles(files?: FileList | null): boolean {
@@ -137,17 +162,7 @@ class DocumentEditor {
   }
 
   schedulePreview(): void {
-    if (this.previewTimer) clearTimeout(this.previewTimer)
-    this.previewTimer = setTimeout(() => { void this.updatePreview() }, 120)
-  }
-
-  async updatePreview(): Promise<void> {
-    const sequence = ++this.previewSequence
-    const staging = document.createElement('article'); staging.className = 'markdown-content'
-    staging.innerHTML = renderMarkdown(this.markdown, this.directory)
-    await renderDiagrams(staging, settings?.theme === 'night')
-    if (active !== this || sequence !== this.previewSequence) return
-    const scroll = preview.scrollTop; preview.replaceChildren(staging); preview.scrollTop = scroll
+    this.preview.schedule({ markdown: this.markdown, directory: this.directory, dark: settings?.theme === 'night' })
   }
 
   syncPreviewScroll(): void {
@@ -157,12 +172,10 @@ class DocumentEditor {
     preview.scrollTop = ratio * Math.max(0, preview.scrollHeight - preview.clientHeight)
   }
 
-  dispose(): void { this.rich.destroy(); this.source.view.destroy(); if (this.previewTimer) clearTimeout(this.previewTimer) }
+  dispose(): void { this.preview.cancel(); this.rich.destroy(); this.source.view.destroy() }
 }
 
-configureAssetDirectory(() => active?.directory ?? '')
-
-function configure(payload: DocumentPayload): void {
+function configure(payload: Pick<DocumentPayload, 'mode' | 'settings'>): void {
   settings = payload.settings
   const css = document.documentElement.style
   const config = payload.settings
@@ -173,7 +186,7 @@ function configure(payload: DocumentPayload): void {
       entry.rich.setOptions({ editorProps: { ...entry.rich.options.editorProps,
         attributes: { 'aria-label': t('文章所见即所得编辑器'), spellcheck: String(config.spellcheck) } } })
       entry.rich.view.dispatch(entry.rich.state.tr.setMeta('mori-language-change', true))
-      if (entry !== active) configureSourceLanguage(entry.source.view, entry.source.language, config.language)
+      if (entry !== active) entry.configureSource(config)
     }
   }
   for (const [index, button] of [...slash.children].entries()) button.textContent = insertItems[index].symbol + '  ' + t(insertItems[index].label)
@@ -188,8 +201,7 @@ function configure(payload: DocumentPayload): void {
   customStyle.textContent = config.customCSS
   if (active) {
     active.rich.view.dom.setAttribute('spellcheck', String(config.spellcheck))
-    configureSourceLanguage(active.source.view, active.source.language, config.language,
-      [active.source.numbers.reconfigure(config.showLineNumbers ? lineNumbers() : [])])
+    active.configureSource(config)
     active.setMode(payload.mode); selectionUI.requestUpdate()
   }
 }
@@ -200,7 +212,7 @@ function load(payload: DocumentPayload): void {
   if (!entry) { entry = new DocumentEditor(payload); documents.set(payload.id, entry) }
   else { entry.replace(payload) }
   const switched = active !== entry
-  if (switched) document.querySelector('.find-panel')?.remove()
+  if (switched) { active?.preview.cancel(); preview.replaceChildren(); document.querySelector('.find-panel')?.remove() }
   active = entry
   if (richHost.firstChild !== entry.richMount) richHost.replaceChildren(entry.richMount)
   if (sourceHost.firstChild !== entry.sourceMount) sourceHost.replaceChildren(entry.sourceMount)
@@ -219,7 +231,9 @@ function load(payload: DocumentPayload): void {
 function command(name: string, payload: Record<string, unknown> = {}): void {
   if (name === 'dispose') {
     selectionUI.dismiss()
-    const id = String(payload.id); documents.get(id)?.dispose(); documents.delete(id); return
+    const id = String(payload.id)
+    if (active?.id === id) { active = undefined; preview.replaceChildren() }
+    documents.get(id)?.dispose(); documents.delete(id); return
   }
   if (!active) return
   if (name === 'find') {
@@ -288,18 +302,20 @@ document.addEventListener('keydown', event => {
 
 window.Mori = {
   load, configure, command,
-  metadata: () => readMetadata(active?.markdown ?? ''),
+  metadata: documentID => { const entry = documents.get(documentID); return entry ? readMetadata(entry.markdown) : null },
   flush: () => ({ id: active?.id ?? '', markdown: active?.markdown ?? '' }),
-  async exportHTML() {
-    if (!active) return ''
+  async exportHTML(documentID) {
+    const entry = documents.get(documentID)
+    if (!entry) return null
+    const language = editorLanguage(); const fallbackTitle = t('文章')
     const rendered = document.createElement('article'); rendered.className = 'markdown-content'
-    rendered.innerHTML = renderMarkdown(active.markdown, active.directory)
+    rendered.innerHTML = renderMarkdown(entry.markdown, entry.directory)
     await renderDiagrams(rendered, false)
     const styles = [...document.styleSheets].filter(sheet => sheet.ownerNode !== customStyle)
       .flatMap(sheet => { try { return [...sheet.cssRules].map(rule => rule.cssText) } catch { return [] } }).join('\n')
-    const title = rendered.querySelector('h1')?.textContent ?? t('文章')
+    const title = rendered.querySelector('h1')?.textContent ?? fallbackTitle
     const safeTitle = title.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
-    return `<!doctype html><html lang="${editorLanguage()}" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportStyles}</style></head><body>${rendered.outerHTML}</body></html>`
+    return `<!doctype html><html lang="${language}" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${styles}\n${exportStyles}</style></head><body>${rendered.outerHTML}</body></html>`
   }
 }
 

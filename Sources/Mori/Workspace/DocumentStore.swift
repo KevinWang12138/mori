@@ -28,18 +28,35 @@ final class DocumentStore: ObservableObject {
     var autosaveTasks: [UUID: Task<Void, Never>] = [:]
     var recoveryTask: Task<Void, Never>?
     var searchTask: Task<Void, Never>?
+    var workspaceTask: Task<Void, Never>?
+    var diskCheckTask: Task<Void, Never>?
     var revisionDates: [UUID: Date] = [:]
     var recoveryBlocked = false
     private var diskTimer: Timer?
-    private var searchCache: [String: String] = [:]
+    var searchCache: [String: String] = [:]
+    private var statisticsContent: String?
+    private var cachedStatistics = WritingStatistics(text: "")
+    private var outlineContent: String?
+    private var cachedHeadings: [MarkdownHeading] = []
 
     var activeDocument: WritingDocument? { documents.first { $0.id == activeID } }
-    var statistics: WritingStatistics { WritingStatistics(text: activeDocument?.content ?? "") }
-    var headings: [MarkdownHeading] { MarkdownAnalysis.headings(in: activeDocument?.content ?? "") }
+    var statistics: WritingStatistics {
+        let content = activeDocument?.content ?? ""
+        if statisticsContent != content { cachedStatistics = WritingStatistics(text: content); statisticsContent = content }
+        return cachedStatistics
+    }
+    var headings: [MarkdownHeading] {
+        let content = activeDocument?.content ?? ""
+        if outlineContent != content { cachedHeadings = MarkdownAnalysis.headings(in: content); outlineContent = content }
+        return cachedHeadings
+    }
     var visibleArticles: [WorkspaceArticle] {
+        let openContents = Dictionary(documents.compactMap { document in
+            document.url.map { ($0.path, document.content) }
+        }, uniquingKeysWith: { _, latest in latest })
         let filtered = articles.filter { article in
             query.isEmpty || article.relativePath.localizedCaseInsensitiveContains(query)
-                || (searchContent && (searchCache[article.id] ?? "").localizedCaseInsensitiveContains(query))
+                || (searchContent && (openContents[article.id] ?? searchCache[article.id] ?? "").localizedCaseInsensitiveContains(query))
         }
         return sortByRecent ? filtered.sorted { $0.modified > $1.modified } : filtered
     }
@@ -53,6 +70,11 @@ final class DocumentStore: ObservableObject {
         diskTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkExternalChanges() }
         }
+    }
+
+    deinit {
+        diskTimer?.invalidate(); diskCheckTask?.cancel(); workspaceTask?.cancel(); searchTask?.cancel(); recoveryTask?.cancel()
+        for task in autosaveTasks.values { task.cancel() }
     }
 
     func activate(_ id: UUID) {
@@ -84,31 +106,6 @@ final class DocumentStore: ObservableObject {
     func newWelcome() {
         let document = WritingDocument(recovery: RecoverableDocument(content: WelcomeArticle.content))
         documents.append(document); activeID = document.id; scheduleRecovery()
-    }
-
-    func refreshWorkspace() {
-        guard let workspaceURL else { return }
-        do { articles = try WorkspaceScanner.scan(workspaceURL); indexSearchContent() }
-        catch { errorMessage = L10n.text("文章文件夹暂时无法读取。请重新选择文件夹。") }
-    }
-
-    func indexSearchContent() {
-        guard searchContent else { return }
-        let captured = articles
-        searchTask?.cancel()
-        searchTask = Task { [weak self] in
-            let contents = await Task.detached(priority: .utility) {
-                var values: [String: String] = [:]
-                for article in captured {
-                    if Task.isCancelled { break }
-                    if let data = try? Data(contentsOf: article.url), data.count < 2 * 1024 * 1024,
-                        let text = String(data: data, encoding: .utf8) { values[article.id] = text }
-                }
-                return values
-            }.value
-            guard !Task.isCancelled else { return }
-            self?.searchCache = contents; self?.objectWillChange.send()
-        }
     }
 
     func loadRevisions() {

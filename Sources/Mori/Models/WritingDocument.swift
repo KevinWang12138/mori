@@ -2,18 +2,28 @@ import Foundation
 import MoriCore
 
 struct WritingDocument: Identifiable, Equatable {
-    var recovery: RecoverableDocument
+    var recovery: RecoverableDocument {
+        didSet {
+            if recovery.content != oldValue.content { contentTitle = MarkdownAnalysis.title(in: recovery.content, fallback: "") }
+        }
+    }
     var startsInBody = false
     var conflict = false
     var saveFailure: String?
     var lastSaved: Date?
+    private var contentTitle: String
     var id: UUID { recovery.id }
     var content: String { recovery.content }
     var url: URL? { recovery.path.map { URL(fileURLWithPath: $0) } }
     var isDirty: Bool { content != recovery.savedContent }
-    var title: String { MarkdownAnalysis.title(in: content, fallback: url?.deletingPathExtension().lastPathComponent ?? L10n.text("未命名文章")) }
+    var title: String { contentTitle.isEmpty ? (url?.deletingPathExtension().lastPathComponent ?? L10n.text("未命名文章")) : contentTitle }
     var filename: String { url?.lastPathComponent ?? title }
     var revisionKey: String { recovery.path ?? id.uuidString }
+
+    init(recovery: RecoverableDocument, startsInBody: Bool = false) {
+        self.recovery = recovery; self.startsInBody = startsInBody
+        contentTitle = MarkdownAnalysis.title(in: recovery.content, fallback: "")
+    }
 }
 
 enum EditorMode: String, Codable, CaseIterable, Identifiable {

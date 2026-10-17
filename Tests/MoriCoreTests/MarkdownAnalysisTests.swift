@@ -38,6 +38,25 @@ final class MarkdownAnalysisTests: XCTestCase {
         XCTAssertTrue(text.contains("pubDate: 2026-10-13")); XCTAssertTrue(text.contains("draft: true"))
     }
 
+    func testFrontMatterPreservesCRLFAndEmptyOrUnclosedHeaders() {
+        for text in ["---\r\ntitle: \"中文 🌲\"\r\n...\r\n\r\n正文\r\n", "---\n---", "---\n...\n", " \t--- \nkey: value\n--- \nbody"] {
+            let parts = FrontMatter.split(text)
+            XCTAssertEqual(parts.prefix + parts.body, text)
+            XCTAssertFalse(parts.prefix.isEmpty)
+        }
+        XCTAssertEqual(FrontMatter.value("title", in: "---\r\ntitle: \"中文 🌲\"\r\n---\r\n正文"), "中文 🌲")
+        for text in ["---", "---\n", "---\r\nnot closed", "正文\n---\ntitle: example\n---\n"] {
+            XCTAssertEqual(FrontMatter.split(text).body, text)
+            XCTAssertEqual(FrontMatter.split(text).prefix, "")
+        }
+    }
+
+    func testTitleKeepsMetadataPriorityAndFirstHeadingFallback() {
+        XCTAssertEqual(MarkdownAnalysis.title(in: "---\ntitle: 元信息标题\n---\n# 正文标题"), "元信息标题")
+        XCTAssertEqual(MarkdownAnalysis.title(in: "```md\n# 代码\n```\n# 第一标题\n## 第二标题"), "第一标题")
+        XCTAssertEqual(MarkdownAnalysis.title(in: "没有标题", fallback: "文件名"), "文件名")
+    }
+
     func testMixedChineseAndEnglishStatisticsIgnoreMetadata() {
         let stats = WritingStatistics(text: "---\ntitle: not counted\n---\n\n你好 world test")
         XCTAssertEqual(stats.words, 4); XCTAssertEqual(stats.characters, 11); XCTAssertEqual(stats.readingMinutes, 1)

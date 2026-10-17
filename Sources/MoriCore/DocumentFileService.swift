@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-public struct DiskSnapshot: Equatable {
+public struct DiskSnapshot: Equatable, Sendable {
     public let content: String
     public let fingerprint: String
     public let usesCRLF: Bool
